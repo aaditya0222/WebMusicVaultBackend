@@ -26,3 +26,22 @@ fixed songs services, but now need to fix the songs schema to behave how the son
 need to later add limitation of song title length in zod and in upload function also
 
 for now using auth middleware for every auth place, but later need to like make logic for detecting the admin that is me
+
+common ways of writing commit message
+Common types
+
+feat → new feature
+
+fix → bug fix
+
+chore → config, tooling, deps
+
+refactor → code change, no behavior change
+
+docs → docs only
+
+test → tests
+
+ci → GitHub Actions, pipelines
+
+example-> feat: added like feature

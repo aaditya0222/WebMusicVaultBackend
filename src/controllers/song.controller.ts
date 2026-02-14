@@ -18,13 +18,11 @@ import {
   searchSongsSchema,
   uploadSongRequest,
   songSchema,
-  updateSongSchema,
   updateSongRequest,
   parsedSongsQuery,
   getRandomSongSchema,
   getRandomSongRequest,
 } from "../schemas/song.schema";
-import { accessSync } from "fs";
 
 const uploadSongs = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
