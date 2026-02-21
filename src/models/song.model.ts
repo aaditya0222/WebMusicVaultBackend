@@ -96,7 +96,7 @@ export const TAGS = [
   ...TAG_CATEGORIES.vocal,
 ];
 
-export interface Song {
+export interface SongI {
   title: string;
   duration: number;
   artist?: string;
@@ -111,7 +111,7 @@ export interface Song {
   updatedAt: Date;
 }
 
-const songSchema = new Schema<Song>(
+const songSchema = new Schema<SongI>(
   {
     title: { type: String, required: true, trim: true, unique: true },
     duration: { type: Number, required: true, min: 1 },
@@ -155,5 +155,5 @@ songSchema.set("toJSON", {
     delete (ret as any).__v;
   },
 });
-const Song = model<Song>("Song", songSchema);
+const Song = model<SongI>("Song", songSchema);
 export default Song;

@@ -7,7 +7,7 @@ const name = z
   .max(15, "Playlist name must be less than 15 characters")
   .regex(
     /^[a-zA-Z0-9_ ]+$/,
-    "Playlist name can only contain letters, numbers, underscores, and spaces"
+    "Playlist name can only contain letters, numbers, underscores, and spaces",
   );
 
 const description = z
@@ -32,8 +32,20 @@ const createPlaylistSchema = z.object({
 const modifyPlaylistSongSchema = z.object({
   params: z.object({
     playlistId: objectId,
-    songId: objectId,
+  }),
+  body: z.object({
+    songIds: z.array(objectId),
+  }),
+});
+const getPlaylistSongsSchema = z.object({
+  query: z.object({
+    playlistId: objectId,
+    limit: z.coerce.number().min(1).max(25).default(20),
   }),
 });
 
-export { createPlaylistSchema, modifyPlaylistSongSchema, objectId };
+export {
+  createPlaylistSchema,
+  modifyPlaylistSongSchema,
+  getPlaylistSongsSchema,
+};

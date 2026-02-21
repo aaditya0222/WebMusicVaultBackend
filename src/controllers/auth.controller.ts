@@ -2,7 +2,6 @@ import asyncHandler from "express-async-handler";
 import ApiResponse from "../utils/ApiResponse";
 import { Request, Response } from "express";
 import { HttpStatus } from "../utils/HttpStatus";
-import User from "../models/user.model";
 import ApiError from "../utils/ApiError";
 import { env } from "../config/env";
 import { sendOtpService } from "../services/otp.services";
@@ -22,6 +21,7 @@ import {
   verifyEmailService,
   refreshAccessTokenService,
 } from "../services/auth.services";
+import type { UserI } from "../models/user.model";
 
 const options: CookieOptions = {
   httpOnly: true,
@@ -32,7 +32,7 @@ const options: CookieOptions = {
 
 const oauthLogin = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const user = req.user as User;
+    const user = req.user as UserI;
 
     if (!user) {
       throw new ApiError(500, "User not found after OAuth login");
@@ -46,9 +46,9 @@ const oauthLogin = asyncHandler(
         new ApiResponse(HttpStatus.OK, "Successfully logged in", {
           user,
           accessToken,
-        })
+        }),
       );
-  }
+  },
 );
 
 const register = asyncHandler(
@@ -62,9 +62,9 @@ const register = asyncHandler(
         new ApiResponse(HttpStatus.Created, "Successfully logged in", {
           user,
           accessToken,
-        })
+        }),
       );
-  }
+  },
 );
 
 const login = asyncHandler(
@@ -78,14 +78,14 @@ const login = asyncHandler(
         new ApiResponse(HttpStatus.OK, "Successfully logged in", {
           user,
           accessToken,
-        })
+        }),
       );
-  }
+  },
 );
 
 const logout = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const user = req.user as User;
+    const user = req.user as UserI;
     if (!user.refreshToken) {
       throw new ApiError(HttpStatus.BadRequest, "User is not logged in");
     }
@@ -95,9 +95,9 @@ const logout = asyncHandler(
       .clearCookie("refreshToken", options)
       .status(HttpStatus.OK)
       .json(
-        new ApiResponse(HttpStatus.OK, "User logged out successfully", null)
+        new ApiResponse(HttpStatus.OK, "User logged out successfully", null),
       );
-  }
+  },
 );
 
 const suggestUsername = (req: Request, res: Response): void => {
@@ -109,8 +109,8 @@ const suggestUsername = (req: Request, res: Response): void => {
       new ApiResponse(
         HttpStatus.OK,
         "Successfully sent list of suggested usernames",
-        usernames
-      )
+        usernames,
+      ),
     );
 };
 
@@ -119,12 +119,15 @@ const setPassword = asyncHandler(async (req: Request, res: Response) => {
   const data = req.body as SetPasswordRequest;
   const { refreshToken, accessToken, user } = await setPasswordService(data);
 
-  res.status(HttpStatus.OK).cookie("refreshToken", refreshToken, options).json(
-    new ApiResponse(HttpStatus.OK, "Successfully set password", {
-      user,
-      accessToken,
-    })
-  );
+  res
+    .status(HttpStatus.OK)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(HttpStatus.OK, "Successfully set password", {
+        user,
+        accessToken,
+      }),
+    );
 });
 
 //Otp Controllers
@@ -139,10 +142,10 @@ const sendOtp = asyncHandler(
         new ApiResponse(
           HttpStatus.OK,
           "Successfully send the otp to your email",
-          null
-        )
+          null,
+        ),
       );
-  }
+  },
 );
 const verifyEmail = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
@@ -152,23 +155,22 @@ const verifyEmail = asyncHandler(
     res
       .status(HttpStatus.OK)
       .json(
-        new ApiResponse(HttpStatus.OK, "Successfully verified email", null)
+        new ApiResponse(HttpStatus.OK, "Successfully verified email", null),
       );
-  }
+  },
 );
 
 const refreshAccessToken = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const refreshToken = req.cookies.refreshToken;
-    const { accessToken, newRefreshToken } = await refreshAccessTokenService(
-      refreshToken
-    );
+    const { accessToken, newRefreshToken } =
+      await refreshAccessTokenService(refreshToken);
 
     res
       .status(HttpStatus.OK)
       .cookie("refreshToken", newRefreshToken, options)
       .json({ accessToken });
-  }
+  },
 );
 
 export {

@@ -3,7 +3,7 @@ import { HttpStatus } from "../utils/HttpStatus";
 import { UploadApiResponse, UploadApiErrorResponse } from "cloudinary";
 import { deleteFile, uploadFile } from "../config/cloudinary";
 import Song from "../models/song.model";
-import { type Song as SongT } from "../models/song.model";
+import type { SongI } from "../models/song.model";
 import { SortOrder, Types } from "mongoose";
 import { env } from "../config/env";
 import {
@@ -19,7 +19,7 @@ import { FilterQuery } from "mongoose";
 
 type skippedT = { title: string; reason: string }[];
 interface uploadSongResponse {
-  uploaded: SongT[];
+  uploaded: SongI[];
   skipped: skippedT;
   summary: {
     totalFiles: number;
@@ -56,7 +56,7 @@ type uploadResultReturnT =
     }
   | {
       type: "uploaded";
-      song: SongT;
+      song: SongI;
     };
 
 const makeSkipped = (file: Express.Multer.File, reason: string) => ({
@@ -112,7 +112,7 @@ const uploadSongService = async (
   });
 
   const results = await Promise.allSettled(tasks);
-  const uploadedSongs: SongT[] = [];
+  const uploadedSongs: SongI[] = [];
   const skippedSongs: skippedT = [];
 
   for (const r of results) {
@@ -153,7 +153,7 @@ const createCursorQuery = ({
   cursor: cursorT;
   sortBy: sortByT;
   sortOrder: SortOrder;
-}): FilterQuery<SongT> => {
+}): FilterQuery<SongI> => {
   if (cursor) {
     if (sortOrder === "asc") {
       return sortBy === "title"
@@ -210,7 +210,7 @@ const getSongsOrSearchSongsService = async ({
   tags,
   isSearch,
 }: getSongsOrSearchSongsServiceI): Promise<{
-  songs: SongT[];
+  songs: SongI[];
   nextCursor: cursorT;
   hasMoreSongs: boolean;
 }> => {
@@ -229,7 +229,7 @@ const getSongsOrSearchSongsService = async ({
       .limit(limit + 1)
       .lean();
   } else {
-    const dbSearchQuery: FilterQuery<SongT> = {
+    const dbSearchQuery: FilterQuery<SongI> = {
       ...(query && {
         $and: [
           ...query.split(" ").map((word) => {
@@ -271,7 +271,7 @@ const getSongsOrSearchSongsService = async ({
 
 const getRandomSongService = async (
   query: getRandomSongRequest,
-): Promise<SongT | null> => {
+): Promise<SongI | null> => {
   const { genre, tags } = query;
 
   const orFilters: Record<string, unknown>[] = [];
@@ -305,7 +305,7 @@ const updateSongFieldsService = async ({
   artist,
   tags,
   genre,
-}: updateSongRequest & { songId: string }): Promise<SongT> => {
+}: updateSongRequest & { songId: string }): Promise<SongI> => {
   const song = await Song.findOneAndUpdate(
     { _id: songId },
     {

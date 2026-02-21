@@ -12,7 +12,7 @@ import {
 } from "../schemas/user.schema";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-
+import { TokenPayload } from "../types/types";
 const accessTokenExpiry = env.ACCESS_TOKEN_EXPIRY as StringValue;
 const refreshTokenExpiry = env.REFRESH_TOKEN_EXPIRY as StringValue;
 

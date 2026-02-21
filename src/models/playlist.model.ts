@@ -38,7 +38,7 @@ const playlistSchema = new Schema<Playlist>(
       default: "private",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 playlistSchema.index({ owner: 1, name: 1 }, { unique: true });

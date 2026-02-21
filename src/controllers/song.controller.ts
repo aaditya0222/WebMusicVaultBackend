@@ -4,7 +4,6 @@ import Song from "../models/song.model";
 import { HttpStatus } from "../utils/HttpStatus";
 import ApiResponse from "../utils/ApiResponse";
 import ApiError from "../utils/ApiError";
-import type { UserI } from "../models/user.model";
 import {
   getSongsOrSearchSongsService,
   uploadSongService,
@@ -29,11 +28,7 @@ const uploadSongs = asyncHandler(
     const body: uploadSongRequest = req.body;
     const files = songSchema.parse(req.files);
 
-    const uploadRes = await uploadSongService(
-      body,
-      files,
-      (req.user as UserI)._id,
-    );
+    const uploadRes = await uploadSongService(body, files, req.user._id);
     let msg = "";
     if (uploadRes.uploaded.length === 0 && uploadRes.skipped.length > 0) {
       msg = "All songs were skipped or failed to upload.";
