@@ -217,7 +217,6 @@ const getSongsOrSearchSongsService = async ({
   let hasMoreSongs = false;
   let nextCursor: cursorT;
   const cursorQuery = createCursorQuery({ sortBy, sortOrder, cursor });
-  console.log(cursorQuery);
   const sort: Record<string, SortOrder> = {
     [sortBy]: sortOrder === "asc" ? 1 : -1,
     _id: sortOrder === "asc" ? 1 : -1,
