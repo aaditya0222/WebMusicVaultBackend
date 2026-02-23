@@ -25,7 +25,7 @@ const songSchema = new Schema<songT>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const Song = model<songT>("Song", songSchema);

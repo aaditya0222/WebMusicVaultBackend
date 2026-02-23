@@ -1,7 +1,7 @@
 import app from "./app";
 import connectDb from "./config/config";
 import { env } from "./config/env";
-// import directUploader from "./scripts/directUploadFromSystem";
+import directUploader from "./scripts/directUploadFromSystem";
 // import { checkDbData, checkDuplicateFiles } from "./scripts/mongodbfiletest";
 // import directDownloader from "./scripts/directDownloadToSystem";
 const startServer = async () => {
@@ -12,7 +12,7 @@ const startServer = async () => {
     // checkDbData();
     // checkDuplicateFiles();
     //-->give path of folder in which your songs are present
-    // directUploader("E:/Personal Folders/Music/musics/hindi");
+    directUploader("D:/Personal Folders/Music/");
     // directDownloader("E:/Personal Folders/Music");
   } catch (error) {
     if (error instanceof Error) {
