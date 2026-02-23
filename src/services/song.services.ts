@@ -86,7 +86,6 @@ const uploadSongService = async (
         duration: uploadResult.duration,
         publicId: uploadResult.public_id,
         fileUrl: uploadResult.secure_url,
-        playbackUrl: uploadResult.playback_url,
         artist: body.artist,
         owner: userId,
         tags: body.tags,
