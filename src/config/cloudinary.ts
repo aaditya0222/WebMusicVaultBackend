@@ -10,7 +10,7 @@ cloudinary.config({
 });
 
 export const uploadSong = async (
-  buffer: Buffer
+  buffer: Buffer,
 ): Promise<UploadApiResponse> => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -21,7 +21,7 @@ export const uploadSong = async (
           return reject(error);
         }
         resolve(result!);
-      }
+      },
     );
 
     stream.end(buffer);
@@ -41,11 +41,21 @@ export const deleteSong = async (publicId: string) => {
         } else {
           resolve(result);
         }
-      }
+      },
     );
   });
 };
 
+export const getSongPlaybackUrl = async (publicId: string) => {
+  try {
+    const playbackUrl = await cloudinary.api.resource(publicId, {
+      resource_type: "video",
+    });
+    return playbackUrl;
+  } catch (error) {
+    console.log(error);
+  }
+};
 export const allSongs = async () => {
   //will write it later
 };
