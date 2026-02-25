@@ -71,7 +71,7 @@ const searchSongsSchema = z.preprocess(
 );
 
 const idParamSchema = z.object({
-  id: mongoId,
+  params: z.object({ id: mongoId }),
 });
 const songSchema = z
   .array(z.custom<Express.Multer.File>())

@@ -12,7 +12,11 @@ import {
   getAllSongOfArtist,
   increamentPlayCount,
 } from "../controllers/song.controller";
-import { updateSongSchema, uploadSongSchema } from "../schemas/song.schema";
+import {
+  idParamSchema,
+  updateSongSchema,
+  uploadSongSchema,
+} from "../schemas/song.schema";
 import { validate } from "../middlewares/validate.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
 
@@ -31,9 +35,9 @@ router.get("/random", getRandomSong);
 //Get all songs of a particular artist
 router.get("/artist/:artist", getAllSongOfArtist);
 //Get song by id
-router.get("/:id", validate, getSongById);
+router.get("/:id", validate(idParamSchema), getSongById);
 //Delete song by id
-router.delete("/:id", authMiddleware, deleteSongById);
+router.delete("/:id", authMiddleware, validate(idParamSchema), deleteSongById);
 //Update song by id
 router.patch(
   "/:id",
