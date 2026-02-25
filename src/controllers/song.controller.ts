@@ -22,6 +22,7 @@ import {
   getRandomSongSchema,
   getRandomSongRequest,
 } from "../schemas/song.schema";
+import User from "../models/user.model";
 
 const uploadSongs = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
@@ -80,7 +81,7 @@ const getSongsOrSearchSongs = asyncHandler(
 );
 const getSongById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { id } = idParamSchema.parse(req.params);
+    const id = req.params.id;
     const song = await Song.findById(id);
     if (!song) {
       throw new ApiError(HttpStatus.NotFound, "Song not found");
@@ -92,7 +93,7 @@ const getSongById = asyncHandler(
 );
 const deleteSongById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { id } = idParamSchema.parse(req.params);
+    const id = req.params.id;
     await deleteSongService(id);
     res
       .status(HttpStatus.OK)

@@ -48,4 +48,5 @@ export {
   createPlaylistSchema,
   modifyPlaylistSongSchema,
   getPlaylistSongsSchema,
+  objectId,
 };
