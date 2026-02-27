@@ -9,18 +9,25 @@ import type { JwtPayload } from "jsonwebtoken";
 export const authMiddleware = async (
   req: Request,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
+  strict: boolean = true,
 ) => {
   try {
     const accessToken = req.get("authorization")?.split(" ")[1];
+
     if (!accessToken) {
-      return next(
-        new ApiError(HttpStatus.Unauthorized, "Access token is required")
-      );
+      if (strict) {
+        return next(
+          new ApiError(HttpStatus.Unauthorized, "Access token is required"),
+        );
+      } else {
+        return next();
+      }
     }
+
     const decoded = jwt.verify(
       accessToken,
-      env.ACCESS_TOKEN_SECRET
+      env.ACCESS_TOKEN_SECRET,
     ) as JwtPayload;
     const user = await User.findById(decoded._id);
     if (!user) {
@@ -31,4 +38,12 @@ export const authMiddleware = async (
   } catch (error) {
     return next(error);
   }
+};
+
+export const authMiddlewareNotStrict = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  return authMiddleware(req, res, next, false);
 };

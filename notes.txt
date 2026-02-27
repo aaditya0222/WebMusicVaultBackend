@@ -45,3 +45,6 @@ test → tests
 ci → GitHub Actions, pipelines
 
 example-> feat: added like feature
+
+
+for checking purposes if a document exists in db, do Model.exist not Model.findOne and so.

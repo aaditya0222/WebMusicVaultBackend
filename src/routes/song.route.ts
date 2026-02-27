@@ -18,7 +18,10 @@ import {
   uploadSongSchema,
 } from "../schemas/song.schema";
 import { validate } from "../middlewares/validate.middleware";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import {
+  authMiddleware,
+  authMiddlewareNotStrict,
+} from "../middlewares/auth.middleware";
 
 //Upload song
 router.post(
@@ -29,7 +32,7 @@ router.post(
   uploadSongs,
 );
 //Get songs for main page and for searching songs
-router.get("/", getSongsOrSearchSongs);
+router.get("/", authMiddlewareNotStrict, getSongsOrSearchSongs);
 //Get random songs for shuffle play
 router.get("/random", getRandomSong);
 //Get all songs of a particular artist

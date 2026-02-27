@@ -4,7 +4,7 @@ import { UploadApiResponse, UploadApiErrorResponse } from "cloudinary";
 import { deleteFile, uploadFile } from "../config/cloudinary";
 import Song from "../models/song.model";
 import type { SongI } from "../models/song.model";
-import { SortOrder, Types } from "mongoose";
+import { PipelineStage, SortOrder, Types } from "mongoose";
 import { env } from "../config/env";
 import {
   getRandomSongRequest,
@@ -46,6 +46,7 @@ interface getSongsOrSearchSongsServiceI {
   genre?: string;
   tags?: string[];
   isSearch: boolean;
+  userId?: Types.ObjectId;
 }
 
 type uploadResultReturnT =
@@ -154,22 +155,28 @@ const createCursorQuery = ({
   sortOrder: SortOrder;
 }): FilterQuery<SongI> => {
   if (cursor) {
+    // NEW CODE - Convert string dates back to Date objects for proper comparison
+    const cursorValue =
+      sortBy === "createdAt" && typeof cursor.value === "string"
+        ? new Date(cursor.value)
+        : cursor.value;
+
     if (sortOrder === "asc") {
       return sortBy === "title"
         ? {
             $or: [
               {
-                [sortBy]: { $gt: cursor.value },
+                [sortBy]: { $gt: cursorValue },
               },
             ],
           }
         : {
             $or: [
               {
-                [sortBy]: { $gt: cursor.value },
+                [sortBy]: { $gt: cursorValue },
               },
               {
-                [sortBy]: cursor.value,
+                [sortBy]: cursorValue,
                 _id: { $gt: new Types.ObjectId(cursor._id) },
               },
             ],
@@ -179,22 +186,36 @@ const createCursorQuery = ({
         ? {
             $or: [
               {
-                [sortBy]: { $lt: cursor.value },
+                [sortBy]: { $lt: cursorValue },
               },
             ],
           }
         : {
             $or: [
               {
-                [sortBy]: { $lt: cursor.value },
+                [sortBy]: { $lt: cursorValue },
               },
               {
-                [sortBy]: cursor.value,
+                [sortBy]: cursorValue,
                 _id: { $lt: new Types.ObjectId(cursor._id) },
               },
             ],
           };
     }
+
+    // OLD CODE - The problem: using cursor.value directly without converting string back to Date
+    // MongoDB compares string "2025-01-15T10:30:00.000Z" lexicographically, not chronologically
+    // This breaks pagination when using dates
+    // if (sortOrder === "asc") {
+    //   return sortBy === "title"
+    //     ? { $or: [{ [sortBy]: { $gt: cursor.value } }] }
+    //     : {
+    //         $or: [
+    //           { [sortBy]: { $gt: cursor.value } },
+    //           { [sortBy]: cursor.value, _id: { $gt: new Types.ObjectId(cursor._id) } },
+    //         ],
+    //       };
+    // }
   } else {
     return {};
   }
@@ -208,6 +229,7 @@ const getSongsOrSearchSongsService = async ({
   genre,
   tags,
   isSearch,
+  userId,
 }: getSongsOrSearchSongsServiceI): Promise<{
   songs: SongI[];
   nextCursor: cursorT;
@@ -217,15 +239,63 @@ const getSongsOrSearchSongsService = async ({
   let hasMoreSongs = false;
   let nextCursor: cursorT;
   const cursorQuery = createCursorQuery({ sortBy, sortOrder, cursor });
-  const sort: Record<string, SortOrder> = {
+  const sort: Record<string, 1 | -1> = {
+    //$sort requires 1 or -1 not the SortOrder type;
     [sortBy]: sortOrder === "asc" ? 1 : -1,
     _id: sortOrder === "asc" ? 1 : -1,
   };
+
+  const createPipeline = (query: FilterQuery<SongI>): PipelineStage[] => {
+    return [
+      {
+        $match: query,
+      },
+      {
+        $sort: sort,
+      },
+      {
+        $limit: limit + 1,
+      },
+    ];
+  };
+  const likePipeline: PipelineStage[] = [
+    {
+      $lookup: {
+        from: "likes",
+        let: { songId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$song", "$$songId"] },
+                  { $eq: ["$likedBy", new Types.ObjectId(userId)] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "likedDocs",
+      },
+    },
+    {
+      $addFields: { isLiked: { $gt: [{ $size: "$likedDocs" }, 0] } },
+    },
+    {
+      $project: {
+        likedDocs: 0,
+      },
+    },
+  ];
   if (!isSearch) {
-    songs = await Song.find(cursorQuery)
-      .sort(sort)
-      .limit(limit + 1)
-      .lean();
+    // songs = await Song.find(cursorQuery)
+    //   .sort(sort)
+    //   .limit(limit + 1)
+    //   .lean();
+    songs = await Song.aggregate([
+      ...createPipeline(cursorQuery),
+      ...(userId ? likePipeline : []),
+    ]);
   } else {
     const dbSearchQuery: FilterQuery<SongI> = {
       ...(query && {
@@ -245,10 +315,14 @@ const getSongsOrSearchSongsService = async ({
       ...(genre && { genre }),
     };
 
-    songs = await Song.find(dbSearchQuery)
-      .sort(sort)
-      .limit(limit + 1)
-      .lean();
+    // songs = await Song.find(dbSearchQuery)
+    //   .sort(sort)
+    //   .limit(limit + 1)
+    //   .lean();
+    songs = await Song.aggregate([
+      ...createPipeline(dbSearchQuery),
+      ...(userId ? likePipeline : []),
+    ]);
   }
   if (songs.length > limit) {
     hasMoreSongs = true;
@@ -258,10 +332,23 @@ const getSongsOrSearchSongsService = async ({
     nextCursor = undefined;
   } else {
     const lastSong = songs[songs.length - 1];
+
+    // NEW CODE - Converts Date to ISO string for proper serialization
+    const cursorValue =
+      sortBy === "createdAt" && lastSong[sortBy] instanceof Date
+        ? (lastSong[sortBy] as Date).toISOString()
+        : lastSong[sortBy];
+
     nextCursor = {
-      value: lastSong[sortBy],
+      value: cursorValue,
       _id: lastSong._id.toString(),
     };
+
+    // OLD CODE - The problem: passes Date object directly, gets serialized as string, then comparison fails
+    // nextCursor = {
+    //   value: lastSong[sortBy],
+    //   _id: lastSong._id.toString(),
+    // };
   }
 
   return { songs, nextCursor, hasMoreSongs };

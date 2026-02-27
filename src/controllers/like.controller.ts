@@ -7,7 +7,6 @@ import ApiResponse from "../utils/ApiResponse";
 const toggleSongLike = asyncHandler(async (req: Request, res: Response) => {
   const songId = req.params.id;
   const song = await Song.exists({ _id: songId });
-  console.log("exists", song);
   if (!song) {
     res.status(404).json({ message: "Song not found" });
     return;
@@ -25,7 +24,7 @@ const toggleSongLike = asyncHandler(async (req: Request, res: Response) => {
         new ApiResponse(
           HttpStatus.OK,
           "Successfully removed song from favourites",
-          null,
+          false,
         ),
       );
     return;
@@ -39,7 +38,7 @@ const toggleSongLike = asyncHandler(async (req: Request, res: Response) => {
       new ApiResponse(
         HttpStatus.OK,
         "Successfully added song to favourites",
-        null,
+        true,
       ),
     );
 });

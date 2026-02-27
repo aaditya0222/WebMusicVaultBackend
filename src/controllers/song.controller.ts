@@ -51,7 +51,7 @@ const getSongsOrSearchSongs = asyncHandler(
     const isSearch = Object.keys(req.query).some((key) =>
       ["query", "tags", "genre", "artist", "title"].includes(key),
     );
-
+    const userId = req.user?._id;
     const parsedQuery: parsedSongsQuery = isSearch
       ? searchSongsSchema.parse(req.query)
       : getSongsSchema.parse(req.query);
@@ -69,6 +69,7 @@ const getSongsOrSearchSongs = asyncHandler(
         genre,
         tags,
         isSearch,
+        userId,
       });
     res.status(HttpStatus.OK).json(
       new ApiResponse(HttpStatus.OK, "Songs sent successfully", {
