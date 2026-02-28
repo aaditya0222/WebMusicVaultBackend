@@ -15,7 +15,7 @@ const uploadSongs = asyncHandler(
     if (!files || files.length === 0) {
       throw new ApiError(
         HttpStatus.BadRequest,
-        "No files uploaded. Please upload at least one song."
+        "No files uploaded. Please upload at least one song.",
       );
     }
 
@@ -50,10 +50,10 @@ const uploadSongs = asyncHandler(
           HttpStatus.Created,
           message,
           savedSongs,
-          alreadyExistingSongs
-        )
+          alreadyExistingSongs,
+        ),
       );
-  }
+  },
 );
 
 const getAllSongs = asyncHandler(
@@ -78,7 +78,7 @@ const getAllSongs = asyncHandler(
     }
 
     const songs = await Song.find(query)
-      .select("title duration fileUrl")
+      .select("title duration fileUrl artist")
       .limit(limit + 1)
       .sort({ createdAt: sortBy });
     const hasMoreSongs = songs.length > limit;
@@ -96,9 +96,9 @@ const getAllSongs = asyncHandler(
         songs,
         nextCursor,
         hasMoreSongs,
-      })
+      }),
     );
-  }
+  },
 );
 
 const getSongById = asyncHandler(
@@ -110,7 +110,7 @@ const getSongById = asyncHandler(
     res
       .status(HttpStatus.OK)
       .json(new ApiResponse(HttpStatus.OK, "Song sent successfully", song));
-  }
+  },
 );
 
 const deleteSongById = asyncHandler(
@@ -130,7 +130,7 @@ const deleteSongById = asyncHandler(
     res
       .status(HttpStatus.OK)
       .json(new ApiResponse(HttpStatus.OK, `song deleted successfully`, null));
-  }
+  },
 );
 
 const searchSong = asyncHandler(
@@ -161,9 +161,9 @@ const searchSong = asyncHandler(
         songs: searchedSongs,
         nextCursor,
         hasMoreSongs,
-      })
+      }),
     );
-  }
+  },
 );
 const getRandomSong = asyncHandler(async (_req: Request, res: Response) => {
   const randomSongArr = await Song.aggregate([{ $sample: { size: 1 } }]);
@@ -174,8 +174,8 @@ const getRandomSong = asyncHandler(async (_req: Request, res: Response) => {
       new ApiResponse(
         HttpStatus.OK,
         "Successfully sent a random song",
-        randomSongArr[0]
-      )
+        randomSongArr[0],
+      ),
     );
 });
 export {

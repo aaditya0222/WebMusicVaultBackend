@@ -4,7 +4,7 @@ import { env } from "./config/env";
 // import directUploader from "./scripts/directUploadFromSystem";
 // import { checkDbData, checkDuplicateFiles } from "./scripts/mongodbfiletest";
 // import directDownloader from "./scripts/directDownloadToSystem";
-import { updateDbEntries } from "./scripts/dbUpdates";
+// import { updateDbEntries } from "./scripts/dbUpdates";
 const startServer = async () => {
   try {
     await connectDb();
@@ -15,7 +15,7 @@ const startServer = async () => {
     //-->give path of folder in which your songs are present
     // directUploader("D:/Personal Folders/Music/");
     // directDownloader("E:/Personal Folders/Music");
-    updateDbEntries();
+    // updateDbEntries();
   } catch (error) {
     if (error instanceof Error) {
       console.log("Error while starting the server: ", error.message, error);
