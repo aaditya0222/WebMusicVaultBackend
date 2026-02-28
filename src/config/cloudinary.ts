@@ -34,12 +34,12 @@ const uploadFile = async ({
           return reject(
             new ApiError(
               HttpStatus.InternalServerError,
-              "No result returned from Cloudinary"
-            )
+              "No result returned from Cloudinary",
+            ),
           );
         }
         resolve(result);
-      }
+      },
     );
 
     stream.end(buffer);
@@ -65,10 +65,22 @@ const deleteFile = async ({
         } else {
           resolve(result);
         }
-      }
+      },
     );
   });
 };
 
-export { uploadFile, deleteFile };
+export const getSongPlaybackUrl = async (publicId: string) => {
+  try {
+    const playbackUrl = await cloudinary.api.resource(publicId, {
+      resource_type: "video",
+    });
+    return playbackUrl;
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const allSongs = async () => {
+  //will write it later
+};
 export default cloudinary;

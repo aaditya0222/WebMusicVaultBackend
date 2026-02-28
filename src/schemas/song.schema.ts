@@ -14,7 +14,7 @@ const artist = z
 const title = z
   .string()
   .trim()
-  .min(1, "artist must be at least of 1 characters")
+  .min(1, "Title must be at least of 1 characters")
   .max(125, "Lenght of title must be less than or equal to 125 characters")
   .optional();
 const genre = z.enum(GENRES).optional();

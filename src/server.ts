@@ -5,16 +5,20 @@ import "./config/passport";
 const startServer = async (): Promise<void> => {
   try {
     await connectDb();
-    app.listen(env.PORT, () => {
-      console.log(`Server running on port ${env.PORT}`);
-    });
+    app.listen(env.PORT);
+    console.log("Successfully Started Server");
+    // checkDbData();
+    // checkDuplicateFiles();
+    //-->give path of folder in which your songs are present
+    // directUploader("D:/Personal Folders/Music/");
+    // directDownloader("E:/Personal Folders/Music");
   } catch (error) {
     if (error instanceof Error) {
       console.error(
         "Error while starting the server: ",
         error.message,
         "\n",
-        error
+        error,
       );
     } else {
       console.error("Error: ", error);
