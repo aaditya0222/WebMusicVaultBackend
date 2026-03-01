@@ -12,7 +12,6 @@ import {
   getRandomSongService,
 } from "../services/song.services";
 import {
-  idParamSchema,
   getSongsSchema,
   searchSongsSchema,
   uploadSongRequest,

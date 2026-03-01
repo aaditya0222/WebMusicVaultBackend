@@ -4,6 +4,7 @@ import {
   login,
   logout,
   suggestUsername,
+  verifyUsername,
   setPassword,
   refreshAccessToken,
   oauthLogin,
@@ -29,8 +30,9 @@ router.post("/", validate(registerSchema), register);
 router.post(
   "/username-suggestions",
   validate(suggestUsernameSchema),
-  suggestUsername
+  suggestUsername,
 );
+router.post("/verify-username", verifyUsername);
 router.post("/set-password", validate(setPasswordSchema), setPassword);
 //Login
 router.post("/login", validate(loginSchema), login);
@@ -38,7 +40,7 @@ router.post("/login", validate(loginSchema), login);
 //Oauth login
 router.get(
   "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  passport.authenticate("google", { scope: ["profile", "email"] }),
 );
 router.get(
   "/google/callback",
@@ -46,7 +48,7 @@ router.get(
     session: false,
     failureRedirect: "/login",
   }),
-  oauthLogin
+  oauthLogin,
 );
 
 //Email verification

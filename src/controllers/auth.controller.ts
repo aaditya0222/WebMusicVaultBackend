@@ -10,6 +10,7 @@ import {
   LoginRequest,
   SendOtpRequest,
   SetPasswordRequest,
+  usernameSchema,
   VerifyEmailRequest,
 } from "../schemas/user.schema";
 import { CookieOptions } from "express";
@@ -22,6 +23,7 @@ import {
   refreshAccessTokenService,
 } from "../services/auth.services";
 import type { UserI } from "../models/user.model";
+import User from "../models/user.model";
 
 const options: CookieOptions = {
   httpOnly: true,
@@ -114,6 +116,22 @@ const suggestUsername = (req: Request, res: Response): void => {
     );
 };
 
+const verifyUsername = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { username } = usernameSchema.parse(req.body);
+    const isVerified = !!(await User.exists({ username }));
+    res
+      .status(HttpStatus.OK)
+      .json(
+        new ApiResponse(
+          HttpStatus.OK,
+          isVerified ? "Username is already taken" : "Username is available",
+          !isVerified,
+        ),
+      );
+  },
+);
+
 //route for people who signed up with the oauth and now they are trying to login with normal local auth.So, they are asked to give otp send to their email and then set the password for their  id.
 const setPassword = asyncHandler(async (req: Request, res: Response) => {
   const data = req.body as SetPasswordRequest;
@@ -176,6 +194,7 @@ const refreshAccessToken = asyncHandler(
 export {
   register,
   suggestUsername,
+  verifyUsername,
   setPassword,
   login,
   logout,
