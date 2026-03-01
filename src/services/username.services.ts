@@ -3,7 +3,7 @@ import { customAlphabet } from "nanoid";
 
 async function generateVerifiedUsername(
   email: string,
-  maxLength = 30
+  maxLength = 30,
 ): Promise<string> {
   const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 4);
 
@@ -42,10 +42,12 @@ const getUsernameSuggestions = ({
   maxLength?: number;
 }) => {
   if (n > 9) n = 9;
+  identifier = identifier.toLowerCase().replace(/\s/g, "");
   if (identifier.includes("@")) {
-    identifier = identifier.split("@")[0].toLowerCase();
+    identifier = identifier.split("@")[0];
   }
-  const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 4);
+  // const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 4);
+  const nanoid = customAlphabet("0123456789", 3);
   if (identifier.length > maxLength - 6)
     identifier = identifier.slice(0, maxLength - 6);
   if (identifier.length < 3) identifier = identifier.padEnd(3, "0");

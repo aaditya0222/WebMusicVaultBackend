@@ -2,11 +2,11 @@ import { z } from "zod";
 const username = z
   .string()
   .trim()
-  .min(3, "Username must be at least 3 characters")
+  .min(2, "Username must be at least 2 characters")
   .max(30, "Username must be less than or equal to 30 characters")
   .regex(
     /^[A-Za-z0-9._]+$/,
-    "Username can only contain lowercase letters, numbers, dots, and underscores"
+    "Username can only contain lowercase letters, numbers, dots, and underscores",
   )
   .transform((u) => u.toLowerCase());
 
@@ -18,7 +18,7 @@ const email = z
 const displayName = z
   .string()
   .trim()
-  .min(3, "Display name must be at least 3 characters")
+  .min(2, "Display name must be at least 2 characters")
   .max(30, "Display name must be less than or equal to 30 letters");
 
 const password = z
@@ -52,13 +52,13 @@ const loginSchema = z.object({
 
 const suggestUsernameSchema = z.object({
   body: z.object({
-    identifier,
+    identifier: displayName.or(email),
     n: z.coerce.number(),
   }),
 });
 const setPasswordSchema = z.object({
   body: z.object({
-    identifier: email.or(username),
+    identifier,
     password,
     otp,
   }),
@@ -78,6 +78,10 @@ const verifyEmailSchema = z.object({
     email,
     otp,
   }),
+});
+
+const usernameSchema = z.object({
+  username: username,
 });
 
 type RegisterRequest = z.infer<typeof registerSchema>["body"];
@@ -103,5 +107,5 @@ export {
   SetPasswordRequest,
   SendOtpRequest,
   VerifyEmailRequest,
-  username,
+  usernameSchema,
 };
