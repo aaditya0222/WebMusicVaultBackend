@@ -26,7 +26,7 @@ import passport from "passport";
 const router = Router();
 
 //Register
-router.post("/", validate(registerSchema), register);
+router.post("/signup", validate(registerSchema), register);
 router.post(
   "/username-suggestions",
   validate(suggestUsernameSchema),

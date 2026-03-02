@@ -4,6 +4,7 @@ import { env } from "../config/env";
 import type { StringValue } from "ms";
 import User from "../models/user.model";
 import type { UserI } from "../models/user.model";
+import { Types } from "mongoose";
 import {
   LoginRequest,
   RegisterRequest,
@@ -15,6 +16,16 @@ import bcrypt from "bcryptjs";
 import { TokenPayload } from "../types/types";
 const accessTokenExpiry = env.ACCESS_TOKEN_EXPIRY as StringValue;
 const refreshTokenExpiry = env.REFRESH_TOKEN_EXPIRY as StringValue;
+
+interface LoginAndRegisterData {
+  username: string;
+  displayName: string;
+  email: string;
+  role: "user" | "admin";
+  avatar: string;
+  _id: Types.ObjectId;
+  isEmailVerified: boolean;
+}
 
 const verifyOtp = async (otp: string, hashedOtp: string): Promise<boolean> => {
   return await bcrypt.compare(otp, hashedOtp);
@@ -53,7 +64,7 @@ const registerService = async ({
 }: RegisterRequest): Promise<{
   accessToken: string;
   refreshToken: string;
-  user: UserI;
+  user: LoginAndRegisterData;
 }> => {
   const existingEmailUser = await User.findOne({ email });
   if (existingEmailUser) {
@@ -70,14 +81,14 @@ const registerService = async ({
       `Username ${username} is already taken`,
     );
   }
-  const user: UserI = await User.create({
+  const createdUser: UserI = await User.create({
     email,
     username,
     displayName,
     password,
   });
 
-  if (!user) {
+  if (!createdUser) {
     throw new ApiError(
       HttpStatus.InternalServerError,
       "Error while registering user",
@@ -94,8 +105,19 @@ const registerService = async ({
   // delete createdUser.refreshToken;
   //*Method-3 -> Automated removal of these two fields inside the schema of user itself
 
-  const { accessToken, refreshToken } = await user.generateAuthTokens();
-  return { accessToken, refreshToken, user };
+  //*Real example of iife(immediately invoked function expression)
+  const userDetailsToSend = ((user: UserI) => {
+    const { authProviders, createdAt, updatedAt, ...requiredData } =
+      user.toJSON();
+    return requiredData as LoginAndRegisterData;
+  })(createdUser);
+
+  const { accessToken, refreshToken } = await createdUser.generateAuthTokens();
+  return {
+    accessToken,
+    refreshToken,
+    user: userDetailsToSend,
+  };
 };
 const loginService = async ({
   identifier,
@@ -103,7 +125,7 @@ const loginService = async ({
 }: LoginRequest): Promise<{
   accessToken: string;
   refreshToken: string;
-  user: UserI;
+  user: LoginAndRegisterData;
 }> => {
   const user: UserI | null = await User.findOne({
     $or: [{ email: identifier }, { username: identifier }],
@@ -130,9 +152,21 @@ const loginService = async ({
       "Invalid email/username or password",
     );
   }
+  //*Real example of iife(immediately invoked function expression)
+  const userDetailsToSend = ((user: UserI) => {
+    const { authProviders, createdAt, updatedAt, ...requiredData } =
+      user.toJSON();
+    return requiredData as LoginAndRegisterData;
+  })(user);
+
   const { accessToken, refreshToken } = await user.generateAuthTokens();
-  return { accessToken, refreshToken, user };
+  return {
+    accessToken,
+    refreshToken,
+    user: userDetailsToSend,
+  };
 };
+
 const setPasswordService = async ({
   identifier,
   password,
@@ -175,6 +209,7 @@ const setPasswordService = async ({
   const { refreshToken, accessToken } = await user.generateAuthTokens();
   return { accessToken, refreshToken, user };
 };
+
 const verifyEmailService = async ({
   otp,
   email,
@@ -204,6 +239,7 @@ const verifyEmailService = async ({
   user.otpExpiry = undefined;
   await user.save();
 };
+
 const refreshAccessTokenService = async (
   refreshToken: string,
 ): Promise<{

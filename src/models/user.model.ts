@@ -13,12 +13,14 @@ export interface UserI extends Document<Types.ObjectId> {
   password?: string;
   avatar: string;
   googleId?: string;
-  isEmailVerified?: boolean;
+  isEmailVerified: boolean;
   otp?: string;
   otpExpiry?: Date;
-  authProviders?: string[];
-  role?: "user" | "admin";
+  authProviders: string[];
+  role: "user" | "admin";
   refreshToken: String | undefined;
+  createdAt: Date;
+  updatedAt: Date;
   isPasswordCorrect(password: string): Promise<boolean>;
   generateAuthTokens(): Promise<{
     accessToken: string;

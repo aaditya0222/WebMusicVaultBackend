@@ -61,10 +61,14 @@ const register = asyncHandler(
       .status(HttpStatus.Created)
       .cookie("refreshToken", refreshToken, options)
       .json(
-        new ApiResponse(HttpStatus.Created, "Successfully logged in", {
-          user,
-          accessToken,
-        }),
+        new ApiResponse(
+          HttpStatus.Created,
+          "Successfully registered the user",
+          {
+            user,
+            accessToken,
+          },
+        ),
       );
   },
 );
