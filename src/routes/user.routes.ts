@@ -4,7 +4,7 @@ import { getUserProfile, updateUser } from "../controllers/user.controller";
 const router = Router();
 
 //Get user profile and details
-router.get("/", authMiddleware, getUserProfile);
+router.get("/me", authMiddleware, getUserProfile);
 //Update user profile details
 router.put("/update", authMiddleware, updateUser);
 

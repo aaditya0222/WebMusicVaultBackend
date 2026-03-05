@@ -148,6 +148,7 @@ userSchema.set("toJSON", {
     delete ret.otp;
     delete ret.otpExpiry;
     delete (ret as any).__v;
+    delete ret.googleId;
     return ret;
   },
 });
