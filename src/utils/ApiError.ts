@@ -2,14 +2,14 @@ import { ErrorCode } from "./ErrorCode";
 import { HttpStatus } from "./HttpStatus";
 
 class ApiError extends Error {
-  status: typeof HttpStatus;
+  status: HttpStatus;
   errors?: string[];
-  code?: typeof ErrorCode;
+  code?: ErrorCode;
   constructor(
-    status: typeof HttpStatus,
+    status: HttpStatus,
     message: string,
     errors?: string[],
-    code?: typeof ErrorCode,
+    code?: ErrorCode,
   ) {
     super(message);
     this.name = "ApiError";
