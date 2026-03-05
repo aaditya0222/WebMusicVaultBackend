@@ -12,13 +12,13 @@ const envSchema = z.object({
     .string()
     .regex(
       /^\d+[smhd]$/,
-      "Must be a valid time string (e.g., '15m', '1h', '7d')"
+      "Must be a valid time string (e.g., '15m', '1h', '7d')",
     ),
   REFRESH_TOKEN_EXPIRY: z
     .string()
     .regex(
       /^\d+[smhd]$/,
-      "Must be a valid time string (e.g., '15m', '1h', '7d')"
+      "Must be a valid time string (e.g., '15m', '1h', '7d')",
     ),
 
   CLOUDINARY_CLOUD_NAME: z.string().min(1, "Cloud name is required"),
@@ -36,6 +36,8 @@ const envSchema = z.object({
     .refine((n) => !isNaN(n), {
       message: "Music file size must be a positive integer",
     }),
+  GMAIL_USER: z.string().min(1, "Email is required"),
+  GMAIL_APP_PASSWORD: z.string().min(1, "Gmail app password Key is required"),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -43,7 +45,7 @@ const parsedEnv = envSchema.safeParse(process.env);
 if (!parsedEnv.success) {
   console.error(
     "Invalid environment variables:",
-    z.treeifyError(parsedEnv.error)
+    z.treeifyError(parsedEnv.error),
   );
   process.exit(1);
 }

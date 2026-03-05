@@ -9,13 +9,13 @@ passport.use(
     {
       clientID: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:3000/api/v1/auth/google/callback",
+      callbackURL: "http://localhost:3001/api/v1/auth/google/callback",
     },
     async (
       _accessToken,
       _refreshToken,
       profile,
-      cb /* can also use don or any other keyword instead of cb*/
+      cb /* can also use don or any other keyword instead of cb*/,
     ) => {
       try {
         let user = await User.findOne({ googleId: profile.id });
@@ -55,6 +55,6 @@ passport.use(
       } catch (err) {
         cb(err, undefined);
       }
-    }
-  )
+    },
+  ),
 );
