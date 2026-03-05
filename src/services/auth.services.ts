@@ -16,6 +16,7 @@ import bcrypt from "bcryptjs";
 import { TokenPayload } from "../types/types";
 const accessTokenExpiry = env.ACCESS_TOKEN_EXPIRY as StringValue;
 const refreshTokenExpiry = env.REFRESH_TOKEN_EXPIRY as StringValue;
+import { ErrorCode } from "../utils/ErrorCode";
 
 interface LoginAndRegisterData {
   username: string;
@@ -30,6 +31,13 @@ interface LoginAndRegisterData {
 const verifyOtp = async (otp: string, hashedOtp: string): Promise<boolean> => {
   return await bcrypt.compare(otp, hashedOtp);
 };
+
+export const getUserDetailsToSend = (user: UserI) => {
+  const { authProviders, createdAt, updatedAt, ...requiredData } =
+    user.toJSON();
+  return requiredData as LoginAndRegisterData;
+};
+
 const generateAccessToken = (payload: TokenPayload): string => {
   const accessToken = jwt.sign(payload, env.ACCESS_TOKEN_SECRET, {
     expiresIn: accessTokenExpiry,
@@ -68,9 +76,17 @@ const registerService = async ({
 }> => {
   const existingEmailUser = await User.findOne({ email });
   if (existingEmailUser) {
+    if (existingEmailUser.googleId) {
+      throw new ApiError(
+        HttpStatus.Conflict,
+        `User with email ${email} is already registered`,
+        { code: ErrorCode.GOOGLE_ACCOUNT },
+      );
+    }
     throw new ApiError(
       HttpStatus.Conflict,
       `User with email ${email} is already registered`,
+      { code: ErrorCode.EMAIL_EXISTS },
     );
   }
 
@@ -106,11 +122,7 @@ const registerService = async ({
   //*Method-3 -> Automated removal of these two fields inside the schema of user itself
 
   //*Real example of iife(immediately invoked function expression)
-  const userDetailsToSend = ((user: UserI) => {
-    const { authProviders, createdAt, updatedAt, ...requiredData } =
-      user.toJSON();
-    return requiredData as LoginAndRegisterData;
-  })(createdUser);
+  const userDetailsToSend = getUserDetailsToSend(createdUser);
 
   const { accessToken, refreshToken } = await createdUser.generateAuthTokens();
   return {
@@ -142,6 +154,7 @@ const loginService = async ({
     throw new ApiError(
       HttpStatus.Forbidden,
       `This account was registered with google. Please log in using google or set a password to enable password login.`,
+      { code: ErrorCode.GOOGLE_ACCOUNT },
     );
   }
 
@@ -153,11 +166,7 @@ const loginService = async ({
     );
   }
   //*Real example of iife(immediately invoked function expression)
-  const userDetailsToSend = ((user: UserI) => {
-    const { authProviders, createdAt, updatedAt, ...requiredData } =
-      user.toJSON();
-    return requiredData as LoginAndRegisterData;
-  })(user);
+  const userDetailsToSend = getUserDetailsToSend(user);
 
   const { accessToken, refreshToken } = await user.generateAuthTokens();
   return {

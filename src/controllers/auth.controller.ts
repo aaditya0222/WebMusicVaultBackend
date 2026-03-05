@@ -29,7 +29,7 @@ const options: CookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === "production",
   maxAge: 7 * 24 * 60 * 60 * 1000,
-  sameSite: "none",
+  sameSite: env.NODE_ENV === "production" ? "none" : "lax",
 };
 
 const oauthLogin = asyncHandler(
@@ -41,15 +41,18 @@ const oauthLogin = asyncHandler(
     }
 
     const { accessToken, refreshToken } = await user.generateAuthTokens();
+    // res
+    //   .status(HttpStatus.OK)
+    //   .cookie("refreshToken", refreshToken, options)
+    //   .json(
+    //     new ApiResponse(HttpStatus.OK, "Successfully logged in", {
+    //       user,
+    //       accessToken,
+    //     }),
+    //   );
     res
-      .status(HttpStatus.OK)
       .cookie("refreshToken", refreshToken, options)
-      .json(
-        new ApiResponse(HttpStatus.OK, "Successfully logged in", {
-          user,
-          accessToken,
-        }),
-      );
+      .redirect("http://localhost:3000");
   },
 );
 
@@ -184,14 +187,20 @@ const verifyEmail = asyncHandler(
 
 const refreshAccessToken = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken: string = req.cookies.refreshToken;
     const { accessToken, newRefreshToken } =
       await refreshAccessTokenService(refreshToken);
 
     res
       .status(HttpStatus.OK)
       .cookie("refreshToken", newRefreshToken, options)
-      .json({ accessToken });
+      .json(
+        new ApiResponse(
+          HttpStatus.OK,
+          "Successfully send the accessToken",
+          accessToken,
+        ),
+      );
   },
 );
 

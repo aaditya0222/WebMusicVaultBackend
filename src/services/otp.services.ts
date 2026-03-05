@@ -20,7 +20,7 @@ const sendOtpService = async ({ email, purpose }: sendOtp): Promise<void> => {
   if (!user) {
     throw new ApiError(
       HttpStatus.NotFound,
-      `User with email ${email} is not registered`
+      `User with email ${email} is not registered`,
     );
   }
   if (purpose === "set-password" && user.password) {
@@ -32,7 +32,7 @@ const sendOtpService = async ({ email, purpose }: sendOtp): Promise<void> => {
   if (user.otpExpiry && user.otpExpiry.getTime() - 9 * 60 * 1000 > Date.now()) {
     throw new ApiError(
       HttpStatus.TooManyRequests,
-      "Please wait one minute before resending Otp"
+      "Please wait one minute before resending Otp",
     );
   }
   if (user.otpExpiry && user.otpExpiry < new Date()) {
@@ -49,9 +49,13 @@ const sendOtpService = async ({ email, purpose }: sendOtp): Promise<void> => {
   await user.save();
 
   const { subject, html } = generateOtpEmail(otp);
-  const { error } = await sendEmail({ to: email, subject, html });
-  if (error) {
-    throw new ApiError(error.statusCode as number, error.message);
+  try {
+    await sendEmail({ to: email, subject, html });
+  } catch (err) {
+    throw new ApiError(
+      HttpStatus.InternalServerError,
+      "Failed to send OTP email",
+    );
   }
   if (process.env.NODE_ENV === "development") {
     console.log(`OTP for ${email}: ${otp}`);

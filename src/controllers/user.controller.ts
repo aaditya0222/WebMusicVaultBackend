@@ -6,11 +6,9 @@ import { getUserDetailsToSend } from "../services/auth.services";
 
 const getUserProfile = (req: Request, res: Response) => {
   const user = getUserDetailsToSend(req.user);
-  res.status(HttpStatus.OK).json(
-    new ApiResponse(HttpStatus.Created, "Successfully sent user data", {
-      user,
-    }),
-  );
+  res
+    .status(HttpStatus.OK)
+    .json(new ApiResponse(HttpStatus.OK, "Successfully sent user data", user));
 };
 
 const updateUser = expressAsyncHandler((req: Request, res: Response) => {});

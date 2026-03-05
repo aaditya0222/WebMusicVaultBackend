@@ -1,14 +1,56 @@
+import { html5Email } from "zod/v4/core/regexes.cjs";
 import { env } from "../config/env";
-import { Resend } from "resend";
-import type { CreateEmailResponse } from "resend";
-
-const resend = new Resend(env.RESEND_EMAIL_API_KEY);
-
+// import { Resend } from "resend";
+// import type { CreateEmailResponse } from "resend";
+// const resend = new Resend(env.RESEND_EMAIL_API_KEY);
+import nodemailer from "nodemailer";
+import { success } from "zod";
 interface EmailOptions {
   to: string;
   subject: string;
   html: string;
 }
+
+// export const sendEmail = async ({
+//   to,
+//   subject,
+//   html,
+// }: EmailOptions): Promise<CreateEmailResponse> => {
+//   try {
+//     const response = await resend.emails.send({
+//       from: env.EMAIL_FROM,
+//       to,
+//       subject,
+//       html,
+//     });
+//     return response;
+//   } catch (error: any) {
+//     console.error("Email sending failed:", error);
+//     throw new Error("Email sending failed");
+//   }
+// };
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: env.GMAIL_USER,
+    pass: env.GMAIL_APP_PASSWORD,
+  },
+});
+
+export const sendEmail = async ({ to, subject, html }: EmailOptions) => {
+  try {
+    await transporter.sendMail({
+      from: env.GMAIL_USER,
+      to,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error("Email sending failed:", error);
+    throw new Error("Email sending failed");
+  }
+};
 
 const EMAIL_STYLES = {
   container: `
@@ -85,25 +127,6 @@ const EMAIL_STYLES = {
     font-weight: 600;
     font-size: 16px;
   `,
-};
-
-export const sendEmail = async ({
-  to,
-  subject,
-  html,
-}: EmailOptions): Promise<CreateEmailResponse> => {
-  try {
-    const response = await resend.emails.send({
-      from: env.EMAIL_FROM,
-      to,
-      subject,
-      html,
-    });
-    return response;
-  } catch (error: any) {
-    console.error("Email sending failed:", error);
-    throw new Error("Email sending failed");
-  }
 };
 
 //*EMAIL TEMPLATES GENERATED USING CLAUDE
