@@ -76,7 +76,7 @@ const registerService = async ({
 }> => {
   const existingEmailUser = await User.findOne({ email });
   if (existingEmailUser) {
-    if (existingEmailUser.googleId) {
+    if (existingEmailUser.googleId && !existingEmailUser.password) {
       throw new ApiError(
         HttpStatus.Forbidden,
         `User with email ${email} is already registered`,
