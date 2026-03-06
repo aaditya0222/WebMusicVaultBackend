@@ -5,22 +5,27 @@ import ApiError from "../utils/ApiError";
 import { generateOtpEmail } from "./email.services";
 import { sendEmail } from "./email.services";
 import bcrypt from "bcryptjs";
-const generateOtp = async (): Promise<string> => {
+const generateOtp = (): string => {
   let otp = crypto.randomInt(100000, 1000000).toString();
   return otp;
 };
 
 type sendOtp = {
-  email: string;
-  purpose: "verify-email" | "set-password";
+  identifier: string;
+  purpose: "verify-email" | "set-password" | "edit-password";
 };
 
-const sendOtpService = async ({ email, purpose }: sendOtp): Promise<void> => {
-  const user = await User.findOne({ email });
+const sendOtpService = async ({
+  identifier,
+  purpose,
+}: sendOtp): Promise<void> => {
+  const user = await User.findOne({
+    $or: [{ email: identifier }, { username: identifier }],
+  });
   if (!user) {
     throw new ApiError(
       HttpStatus.NotFound,
-      `User with email ${email} is not registered`,
+      `User with this credentials doesn't exist`,
     );
   }
   if (purpose === "set-password" && user.password) {
@@ -28,6 +33,10 @@ const sendOtpService = async ({ email, purpose }: sendOtp): Promise<void> => {
   }
   if (purpose === "verify-email" && user.isEmailVerified) {
     throw new ApiError(HttpStatus.Conflict, "Email already verified");
+  }
+  if (purpose === "edit-password") {
+    //TODO: need to write logic maybe later
+    return;
   }
   if (user.otpExpiry && user.otpExpiry.getTime() - 9 * 60 * 1000 > Date.now()) {
     throw new ApiError(
@@ -38,10 +47,9 @@ const sendOtpService = async ({ email, purpose }: sendOtp): Promise<void> => {
   if (user.otpExpiry && user.otpExpiry < new Date()) {
     user.otp = undefined;
     user.otpExpiry = undefined;
-    await user.save();
   }
 
-  const otp = await generateOtp();
+  const otp = generateOtp();
   const hashedOtp = await bcrypt.hash(otp, 10);
   const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
   user.otp = hashedOtp;
@@ -50,7 +58,7 @@ const sendOtpService = async ({ email, purpose }: sendOtp): Promise<void> => {
 
   const { subject, html } = generateOtpEmail(otp);
   try {
-    await sendEmail({ to: email, subject, html });
+    await sendEmail({ to: user.email, subject, html });
   } catch (err) {
     throw new ApiError(
       HttpStatus.InternalServerError,
@@ -58,7 +66,7 @@ const sendOtpService = async ({ email, purpose }: sendOtp): Promise<void> => {
     );
   }
   if (process.env.NODE_ENV === "development") {
-    console.log(`OTP for ${email}: ${otp}`);
+    console.log(`OTP for ${identifier}: ${otp}`);
   }
 };
 

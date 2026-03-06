@@ -142,6 +142,7 @@ const verifyUsername = asyncHandler(
 //route for people who signed up with the oauth and now they are trying to login with normal local auth.So, they are asked to give otp send to their email and then set the password for their  id.
 const setPassword = asyncHandler(async (req: Request, res: Response) => {
   const data = req.body as SetPasswordRequest;
+
   const { refreshToken, accessToken, user } = await setPasswordService(data);
 
   res
@@ -158,9 +159,9 @@ const setPassword = asyncHandler(async (req: Request, res: Response) => {
 //Otp Controllers
 const sendOtp = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { email } = req.body as SendOtpRequest["body"];
+    const { identifier } = req.body as SendOtpRequest["body"];
     const { purpose } = req.query as SendOtpRequest["query"];
-    await sendOtpService({ email, purpose });
+    await sendOtpService({ identifier, purpose });
     res
       .status(HttpStatus.OK)
       .json(

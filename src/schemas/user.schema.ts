@@ -66,7 +66,7 @@ const setPasswordSchema = z.object({
 
 const sendOtpSchema = z.object({
   body: z.object({
-    email,
+    identifier,
   }),
   query: z.object({
     purpose,
