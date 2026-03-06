@@ -78,7 +78,7 @@ const registerService = async ({
   if (existingEmailUser) {
     if (existingEmailUser.googleId) {
       throw new ApiError(
-        HttpStatus.Conflict,
+        HttpStatus.Forbidden,
         `User with email ${email} is already registered`,
         { code: ErrorCode.GOOGLE_ACCOUNT },
       );
@@ -150,7 +150,7 @@ const loginService = async ({
     );
   }
 
-  if (!user.authProviders!.includes("local") && user.password == undefined) {
+  if (!user.authProviders.includes("local") && user.password == undefined) {
     throw new ApiError(
       HttpStatus.Forbidden,
       `This account was registered with google. Please log in using google or set a password to enable password login.`,
