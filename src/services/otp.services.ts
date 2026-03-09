@@ -5,20 +5,17 @@ import ApiError from "../utils/ApiError";
 import { generateOtpEmail } from "./email.services";
 import { sendEmail } from "./email.services";
 import bcrypt from "bcryptjs";
+import { SendOtpService } from "../schemas/user.schema";
+import { ErrorCode } from "../utils/ErrorCode";
 const generateOtp = (): string => {
   let otp = crypto.randomInt(100000, 1000000).toString();
   return otp;
 };
 
-type sendOtp = {
-  identifier: string;
-  purpose: "verify-email" | "set-password" | "edit-password";
-};
-
 const sendOtpService = async ({
   identifier,
   purpose,
-}: sendOtp): Promise<void> => {
+}: SendOtpService): Promise<void> => {
   const user = await User.findOne({
     $or: [{ email: identifier }, { username: identifier }],
   });
@@ -34,9 +31,12 @@ const sendOtpService = async ({
   if (purpose === "verify-email" && user.isEmailVerified) {
     throw new ApiError(HttpStatus.Conflict, "Email already verified");
   }
-  if (purpose === "edit-password") {
-    //TODO: need to write logic maybe later
-    return;
+  if (purpose === "edit-password" && !user.password) {
+    throw new ApiError(
+      HttpStatus.Forbidden,
+      `This account was registered with google. Please log in using google or set a password to enable password login.`,
+      { code: ErrorCode.GOOGLE_ACCOUNT },
+    );
   }
   if (user.otpExpiry && user.otpExpiry.getTime() - 9 * 60 * 1000 > Date.now()) {
     throw new ApiError(

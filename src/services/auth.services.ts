@@ -194,9 +194,9 @@ const setPasswordService = async ({
       `User ${identifier} is not registered`,
     );
   }
-  if (user.password) {
-    throw new ApiError(HttpStatus.Conflict, "Password already set");
-  }
+  // if (user.password) {
+  //   throw new ApiError(HttpStatus.Conflict, "Password already set");
+  // }
   if (!user.otp || !user.otpExpiry) {
     throw new ApiError(
       HttpStatus.BadRequest,
