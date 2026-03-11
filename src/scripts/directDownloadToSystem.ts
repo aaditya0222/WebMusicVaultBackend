@@ -36,6 +36,21 @@ const downloadSong = (url: string, outputPath: string) => {
       });
   });
 };
+const sanitizeFilename = (filename: string): string => {
+  // Replace invalid Windows filename characters with alternatives
+  return filename
+    .replace(/"/g, "\u201D") // Replace straight double quote with curly quote "
+    .replace(/\//g, "-") // Replace forward slash with dash
+    .replace(/\\/g, "-") // Replace backslash with dash
+    .replace(/</g, "«")
+    .replace(/>/g, "»")
+    .replace(/:/g, "·")
+    .replace(/\|/g, "•")
+    .replace(/\?/g, "¿")
+    .replace(/\*/g, "✱")
+    .trim();
+};
+
 const directDownloader = async (songFolderPath: string) => {
   try {
     const folderPath = isAbsolute(songFolderPath)
@@ -45,11 +60,13 @@ const directDownloader = async (songFolderPath: string) => {
     const allSongs = await Song.find({});
     const folderSongsSet = new Set(songsInFolder);
     const songsToDownload = allSongs.filter(
-      (song) => !folderSongsSet.has(song.title)
+      (song) => !folderSongsSet.has(sanitizeFilename(song.title)),
     );
     console.log(songsToDownload.length);
     for (const song of songsToDownload) {
-      const outputPath = join(folderPath, song.title);
+      const sanitizedTitle = sanitizeFilename(song.title);
+      const outputPath = join(folderPath, sanitizedTitle);
+
       await downloadSong(song.fileUrl, outputPath);
     }
   } catch (error) {
