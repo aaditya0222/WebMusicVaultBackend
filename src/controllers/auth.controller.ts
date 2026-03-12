@@ -52,7 +52,7 @@ const oauthLogin = asyncHandler(
     //   );
     res
       .cookie("refreshToken", refreshToken, options)
-      .redirect("http://localhost:3000");
+      .redirect("http://localhost:3000?auth=success");
   },
 );
 
