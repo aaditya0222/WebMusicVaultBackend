@@ -79,15 +79,25 @@ const registerService = async ({
     if (existingEmailUser.googleId && !existingEmailUser.password) {
       throw new ApiError(
         HttpStatus.Forbidden,
-        `User with email ${email} is already registered`,
+        `User with email ${email} is already registered with oauth. Set password to use credentials login`,
         { code: ErrorCode.GOOGLE_ACCOUNT },
       );
+    } else if (
+      existingEmailUser.email === email &&
+      !existingEmailUser.isEmailVerified
+    ) {
+      throw new ApiError(
+        HttpStatus.Conflict,
+        `User with email ${email} is already registered but not verified`,
+        { code: ErrorCode.EMAIL_NOT_VERIFIED },
+      );
+    } else {
+      throw new ApiError(
+        HttpStatus.Conflict,
+        `User with email ${email} is already registered`,
+        { code: ErrorCode.EMAIL_EXISTS },
+      );
     }
-    throw new ApiError(
-      HttpStatus.Conflict,
-      `User with email ${email} is already registered`,
-      { code: ErrorCode.EMAIL_EXISTS },
-    );
   }
 
   const existingUsernameUser = await User.findOne({ username });
@@ -190,8 +200,8 @@ const setPasswordService = async ({
   });
   if (!user) {
     throw new ApiError(
-      HttpStatus.NotFound,
-      `User ${identifier} is not registered`,
+      HttpStatus.Unauthorized,
+      "Invalid email/username or password",
     );
   }
   // if (user.password) {
@@ -201,14 +211,19 @@ const setPasswordService = async ({
     throw new ApiError(
       HttpStatus.BadRequest,
       "No OTP found. Please request a new one.",
+      { code: ErrorCode.OTP_NOT_FOUND },
     );
   }
   if (user.otpExpiry < new Date()) {
-    throw new ApiError(HttpStatus.BadRequest, "OTP expired.Please Try again.");
+    throw new ApiError(
+      HttpStatus.BadRequest,
+      "OTP expired. Please try again.",
+      { code: ErrorCode.OTP_EXPIRED },
+    );
   }
   const isVerified = await verifyOtp(otp, user.otp);
   if (!isVerified) {
-    throw new ApiError(HttpStatus.BadRequest, "Invalid Otp. Please Try again.");
+    throw new ApiError(HttpStatus.BadRequest, "Invalid OTP. Please try again.");
   }
   user.password = password;
   user.otp = undefined;
@@ -226,18 +241,23 @@ const verifyEmailService = async ({
   const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(
-      HttpStatus.NotFound,
-      `User with email ${email} is not registered`,
+      HttpStatus.Unauthorized,
+      "Invalid email/username or password",
     );
   }
   if (!user.otp || !user.otpExpiry) {
     throw new ApiError(
       HttpStatus.BadRequest,
       "No OTP found. Please request a new one.",
+      { code: ErrorCode.OTP_NOT_FOUND },
     );
   }
   if (user.otpExpiry && user.otpExpiry < new Date()) {
-    throw new ApiError(HttpStatus.BadRequest, "OTP expired.Please Try again.");
+    throw new ApiError(
+      HttpStatus.BadRequest,
+      "OTP expired. Please try again.",
+      { code: ErrorCode.OTP_EXPIRED },
+    );
   }
   const isVerified = await verifyOtp(otp, user.otp);
   if (!isVerified) {

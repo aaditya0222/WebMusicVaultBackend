@@ -25,14 +25,16 @@ const errorMiddleware = (
   let responseErrors: NormalizedError[] = [];
 
   if (err instanceof MongooseError.ValidationError) {
-    status = HttpStatus.ValidationError;
+    status = HttpStatus.BadRequest;
+    code = ErrorCode.VALIDATION_ERROR;
     message = "Validation Error";
     responseErrors = Object.entries(err.errors).map(([field, error]: any) => ({
       field,
       message: error.message,
     }));
   } else if (err instanceof ZodError) {
-    status = HttpStatus.ValidationError;
+    status = HttpStatus.BadRequest;
+    code = ErrorCode.VALIDATION_ERROR;
     message = "Validation Error";
 
     responseErrors = err.issues.map((issue) => ({

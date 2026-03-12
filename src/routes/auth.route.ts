@@ -54,7 +54,7 @@ router.get(
 //Email verification
 router.post("/request-otp", validate(sendOtpSchema), sendOtp);
 router.post("/verify-email", validate(verifyEmailSchema), verifyEmail);
-router.post("/resend-otp", validate(sendOtpSchema), sendOtp);
+// router.post("/resend-otp", validate(sendOtpSchema), sendOtp);
 
 //Refresh token
 router.get("/refresh-token", refreshAccessToken);
