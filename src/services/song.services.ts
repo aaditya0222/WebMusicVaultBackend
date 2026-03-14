@@ -79,6 +79,9 @@ const uploadSongService = async (
         folder: "songs",
         resource_type: "video",
       });
+      if (!uploadResult) {
+        throw new Error("There was a problem while uplodading song");
+      }
       if ("error" in uploadResult) {
         return makeSkipped(file, "Unexpected error while uploading");
       }

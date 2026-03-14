@@ -70,17 +70,5 @@ const deleteFile = async ({
   });
 };
 
-export const getSongPlaybackUrl = async (publicId: string) => {
-  try {
-    const playbackUrl = await cloudinary.api.resource(publicId, {
-      resource_type: "video",
-    });
-    return playbackUrl;
-  } catch (error) {
-    console.log(error);
-  }
-};
-export const allSongs = async () => {
-  //will write it later
-};
+export { uploadFile, deleteFile };
 export default cloudinary;

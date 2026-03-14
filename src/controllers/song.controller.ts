@@ -21,7 +21,6 @@ import {
   getRandomSongSchema,
   getRandomSongRequest,
 } from "../schemas/song.schema";
-import User from "../models/user.model";
 
 const uploadSongs = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {

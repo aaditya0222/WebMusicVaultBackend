@@ -6,7 +6,7 @@ import ApiResponse from "../utils/ApiResponse";
 import { Types } from "mongoose";
 import { HttpStatus } from "../utils/HttpStatus";
 import Song from "../models/song.model";
-import { duration } from "zod/v4/classic/iso.cjs";
+import { getPlaylistSongsSchemaType } from "../schemas/playlist.schema";
 const createPlaylist = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { name, status, description } = req.body;
@@ -64,6 +64,7 @@ const addSongs = asyncHandler(async (req, res) => {
         id: song._id,
         message: `'${song.title}' is already present in the playlist`,
       });
+      continue;
     }
     playlist.songs.push(songId);
   }
@@ -77,7 +78,8 @@ const addSongs = asyncHandler(async (req, res) => {
 });
 
 const getPlaylistSongs = asyncHandler(async (req, res) => {
-  const { playlistId, limit } = req.query;
+  let { playlistId, limit } =
+    req.params as unknown as getPlaylistSongsSchemaType;
   const playlistSongs = await Playlist.aggregate([
     {
       $match: {
