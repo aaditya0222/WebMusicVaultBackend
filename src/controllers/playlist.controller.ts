@@ -6,15 +6,20 @@ import ApiResponse from "../utils/ApiResponse";
 import { Types } from "mongoose";
 import { HttpStatus } from "../utils/HttpStatus";
 import Song from "../models/song.model";
-import { getPlaylistSongsSchemaType } from "../schemas/playlist.schema";
+import { createPlaylistSchemaType } from "../schemas/playlist.schema";
+import { env } from "../config/env";
+
 const createPlaylist = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { name, status, description } = req.body;
-    const existingPlaylist = await Playlist.findOne({ name });
+    const { name, status, description } = req.body as createPlaylistSchemaType;
+    const existingPlaylist = await Playlist.findOne({
+      name,
+      owner: req.user.id,
+    });
     if (existingPlaylist) {
       throw new ApiError(
         HttpStatus.Conflict,
-        `Playlist with name '${name}' is already created`,
+        `Playlist with name '${name}' is already exist`,
       );
     }
     const playlist = await Playlist.create({
@@ -28,6 +33,47 @@ const createPlaylist = asyncHandler(
       .json(new ApiResponse(HttpStatus.OK, "Successfully logged in", playlist));
   },
 );
+
+const getPlaylist = asyncHandler(async (req, res) => {
+  const playlists = await Playlist.aggregate([
+    {
+      $match: {
+        $or: [
+          { owner: req.user.id },
+          { isDefault: true },
+          { owner: new Types.ObjectId(env.OWNER_MONGOOSE_ID) },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [{ $project: { username: 1, _id: -1 } }],
+      },
+    },
+    {
+      $addFields: { owner: { $first: "$owner" } },
+    },
+  ]);
+  if (!playlists) {
+    throw new ApiError(
+      HttpStatus.InternalServerError,
+      "There was a problem while fetching playlists",
+    );
+  }
+  res
+    .status(HttpStatus.OK)
+    .json(
+      new ApiResponse(
+        HttpStatus.OK,
+        "Playlists fetched successfully",
+        playlists,
+      ),
+    );
+});
 
 const addSongs = asyncHandler(async (req, res) => {
   const { songIds } = req.body;
@@ -78,8 +124,8 @@ const addSongs = asyncHandler(async (req, res) => {
 });
 
 const getPlaylistSongs = asyncHandler(async (req, res) => {
-  let { playlistId, limit } =
-    req.params as unknown as getPlaylistSongsSchemaType;
+  let { playlistId } = req.params;
+  let { limit } = req.query;
   const playlistSongs = await Playlist.aggregate([
     {
       $match: {
@@ -101,13 +147,13 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
               localField: "owner",
               foreignField: "_id",
               as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    username: 1,
-                  },
-                },
-              ],
+              pipeline: [{ $project: { username: 1 } }],
+            },
+          },
+          {
+            $unwind: {
+              path: "$owner",
+              preserveNullAndEmptyArrays: true,
             },
           },
           {
@@ -123,16 +169,24 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
               playCount: 1,
             },
           },
-          {
-            $limit: limit,
-          },
+          { $limit: Number(limit) },
         ],
       },
     },
   ]);
+
   if (!playlistSongs.length) {
     throw new ApiError(HttpStatus.NotFound, "Invalid Playlist");
   }
-});
 
-export { createPlaylist, addSongs, getPlaylistSongs };
+  res
+    .status(HttpStatus.OK)
+    .json(
+      new ApiResponse(
+        HttpStatus.OK,
+        "Playlist songs fetched successfully",
+        playlistSongs[0],
+      ),
+    );
+});
+export { createPlaylist, addSongs, getPlaylistSongs, getPlaylist };

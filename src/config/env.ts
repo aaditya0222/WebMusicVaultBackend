@@ -37,6 +37,12 @@ const envSchema = z.object({
     }),
   GMAIL_USER: z.string().min(1, "Email is required"),
   GMAIL_APP_PASSWORD: z.string().min(1, "Gmail app password Key is required"),
+  OWNER_MONGOOSE_ID: z
+    .string()
+    .length(
+      24,
+      "Owner id is required for returning owner's picked songs playlist",
+    ),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

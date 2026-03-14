@@ -40,18 +40,17 @@ const modifyPlaylistSongSchema = z.object({
 const getPlaylistSongsSchema = z.object({
   params: z.object({
     playlistId: objectId,
+  }),
+  query: z.object({
     limit: z.coerce.number().min(1).max(25).default(20),
   }),
 });
 
-type getPlaylistSongsSchemaType = z.infer<
-  typeof getPlaylistSongsSchema
->["params"];
-
+type createPlaylistSchemaType = z.infer<typeof createPlaylistSchema>["body"];
 export {
   createPlaylistSchema,
   modifyPlaylistSongSchema,
   getPlaylistSongsSchema,
   objectId,
-  getPlaylistSongsSchemaType,
+  createPlaylistSchemaType,
 };

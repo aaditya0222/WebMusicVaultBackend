@@ -5,6 +5,8 @@ import {
   generateRefreshToken,
 } from "../services/auth.services";
 import avatars from "../config/avatars";
+import Playlist from "./playlist.model";
+import ApiError from "../utils/ApiError";
 
 export interface UserI extends Document<Types.ObjectId> {
   username: string;
@@ -120,6 +122,23 @@ userSchema.pre("save", async function (next) {
     this.avatar = avatars[randomAvatar];
   }
   next();
+});
+
+userSchema.post("save", async function (doc, next) {
+  if (!doc.isNew) {
+    return next();
+  }
+  const playlist = await Playlist.create({
+    name: "Liked Songs",
+    status: "private",
+    description: "This playlist consists your liked songs.",
+    owner: doc._id,
+    isDefault: true,
+  });
+  if (!playlist) {
+    throw new Error("There was a problem while creating liked songs playlist");
+  }
+  return next();
 });
 userSchema.methods.isPasswordCorrect = async function (
   password: string,

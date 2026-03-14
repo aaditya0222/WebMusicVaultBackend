@@ -261,6 +261,20 @@ const getSongsOrSearchSongsService = async ({
       },
     ];
   };
+  const ownerPipeline: PipelineStage[] = [
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [{ $project: { username: 1 } }],
+      },
+    },
+    {
+      $addFields: { owner: { $first: "$owner" } },
+    },
+  ];
   const likePipeline: PipelineStage[] = [
     {
       $lookup: {
@@ -298,6 +312,7 @@ const getSongsOrSearchSongsService = async ({
     songs = await Song.aggregate([
       ...createPipeline(cursorQuery),
       ...(userId ? likePipeline : []),
+      ...ownerPipeline,
     ]);
   } else {
     const dbSearchQuery: FilterQuery<SongI> = {
@@ -325,6 +340,7 @@ const getSongsOrSearchSongsService = async ({
     songs = await Song.aggregate([
       ...createPipeline(dbSearchQuery),
       ...(userId ? likePipeline : []),
+      ...ownerPipeline,
     ]);
   }
   if (songs.length > limit) {
