@@ -7,6 +7,7 @@ const startServer = async (): Promise<void> => {
     await connectDb();
     app.listen(env.PORT);
     console.log("Successfully Started Server");
+    console.log("Test backend ci");
   } catch (error) {
     if (error instanceof Error) {
       console.error(
