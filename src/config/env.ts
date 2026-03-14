@@ -28,7 +28,6 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1, "Google Client Id is required"),
   GOOGLE_CLIENT_SECRET: z.string().min(1, "Google Client Secret is required"),
   RESEND_EMAIL_API_KEY: z.string().min(1, "Resend Email API Key is required"),
-  EMAIL_FROM: z.string().min(1, "Email from value is required"),
   MAX_MUSIC_FILE_SIZE: z
     .string()
     .min(1, "Max song file size must be a valid number in string format")
