@@ -1,0 +1,26 @@
+name: Backend CI
+#since i am using render as backend i can't do the cd steps here
+#the cd steps are handled in the ui of render and its performed by render itself.
+on:
+  push:
+    branches:
+      - v2
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+      - name: Install Dependencies
+        run: npm install
+      - name: Build Typescript
+        run: npm run build
+      - name: Verify docker compose build and run
+        run: docker compose up -d
+      - name: Stop and remove docker containers
+        run: docker compose down
