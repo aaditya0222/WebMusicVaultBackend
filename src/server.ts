@@ -7,11 +7,6 @@ const startServer = async (): Promise<void> => {
     await connectDb();
     app.listen(env.PORT);
     console.log("Successfully Started Server");
-    // checkDbData();
-    // checkDuplicateFiles();
-    //-->give path of folder in which your songs are present
-    // directUploader("D:/Personal Folders/Music/");
-    // directDownloader("E:/Personal Folders/Music");
   } catch (error) {
     if (error instanceof Error) {
       console.error(
