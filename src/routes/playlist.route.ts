@@ -1,14 +1,11 @@
 import { Router } from "express";
 import { validate } from "../middlewares/validate.middleware";
-import {
-  authMiddleware,
-  authMiddlewareNotStrict,
-} from "../middlewares/auth.middleware";
+import { authMiddleware } from "../middlewares/auth.middleware";
 import {
   addSongs,
   createPlaylist,
   getPlaylistSongs,
-  getPlaylist,
+  getPlaylists,
 } from "../controllers/playlist.controller";
 import {
   createPlaylistSchema,
@@ -26,7 +23,7 @@ router.get(
 );
 router
   .route("/")
-  .get(authMiddleware, getPlaylist)
+  .get(authMiddleware, getPlaylists)
   .post(authMiddleware, validate(createPlaylistSchema), createPlaylist);
 
 router.patch(

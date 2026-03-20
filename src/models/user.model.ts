@@ -124,22 +124,22 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-userSchema.post("save", async function (doc, next) {
-  if (!doc.isNew) {
-    return next();
-  }
-  const playlist = await Playlist.create({
-    name: "Liked Songs",
-    status: "private",
-    description: "This playlist consists your liked songs.",
-    owner: doc._id,
-    isDefault: true,
-  });
-  if (!playlist) {
-    throw new Error("There was a problem while creating liked songs playlist");
-  }
-  return next();
-});
+// userSchema.post("save", async function (doc, next) {
+//   if (!doc.isNew) {
+//     return next();
+//   }
+//   const playlist = await Playlist.create({
+//     name: "Liked Songs",
+//     status: "private",
+//     description: "This playlist consists your liked songs.",
+//     owner: doc._id,
+//     isDefault: true,
+//   });
+//   if (!playlist) {
+//     throw new Error("There was a problem while creating liked songs playlist");
+//   }
+//   return next();
+// });
 userSchema.methods.isPasswordCorrect = async function (
   password: string,
 ): Promise<boolean> {

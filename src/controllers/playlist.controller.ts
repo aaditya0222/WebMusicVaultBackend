@@ -34,43 +34,98 @@ const createPlaylist = asyncHandler(
   },
 );
 
-const getPlaylist = asyncHandler(async (req, res) => {
+const getPlaylists = asyncHandler(async (req, res) => {
   const playlists = await Playlist.aggregate([
     {
       $match: {
-        $or: [
-          { owner: req.user.id },
-          { isDefault: true },
-          { owner: new Types.ObjectId(env.OWNER_MONGOOSE_ID) },
+        owner: new Types.ObjectId(req.user.id),
+      },
+    },
+    {
+      $addFields: {
+        songs: { $size: "$songs" },
+      },
+    },
+    {
+      $unionWith: {
+        coll: "likes",
+        pipeline: [
+          {
+            $match: {
+              likedBy: new Types.ObjectId(req.user.id),
+            },
+          },
+          {
+            $group: {
+              _id: "$likedBy",
+              songs: { $count: {} },
+            },
+          },
+          {
+            $addFields: {
+              name: "Favourite Songs",
+              description: "This playlist contains your favourite songs",
+              status: "private",
+              isDefault: true,
+            },
+          },
         ],
       },
     },
     {
-      $lookup: {
-        from: "users",
-        localField: "owner",
-        foreignField: "_id",
-        as: "owner",
-        pipeline: [{ $project: { username: 1, _id: -1 } }],
+      $unionWith: {
+        coll: "likes",
+        pipeline: [
+          {
+            $match: {
+              likedBy: new Types.ObjectId(env.OWNER_MONGOOSE_ID),
+            },
+          },
+          {
+            $group: {
+              _id: "$likedBy",
+              songs: { $count: {} },
+            },
+          },
+          {
+            $addFields: {
+              name: "Owner's Favourite Songs",
+              description: "This playlist contains owner's favourite songs",
+              status: "public",
+              isDefault: true,
+            },
+          },
+        ],
       },
     },
     {
-      $addFields: { owner: { $first: "$owner" } },
+      $group: {
+        _id: null,
+        defaultPlaylists: {
+          $push: {
+            $cond: [{ $eq: ["$isDefault", true] }, "$$ROOT", "$$REMOVE"],
+          },
+        },
+        personalPlaylists: {
+          $push: {
+            $cond: [{ $eq: ["$isDefault", false] }, "$$ROOT", "$$REMOVE"],
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+      },
     },
   ]);
-  if (!playlists) {
-    throw new ApiError(
-      HttpStatus.InternalServerError,
-      "There was a problem while fetching playlists",
-    );
-  }
   res
     .status(HttpStatus.OK)
     .json(
       new ApiResponse(
         HttpStatus.OK,
         "Playlists fetched successfully",
-        playlists,
+        playlists[0],
       ),
     );
 });
@@ -189,4 +244,4 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
       ),
     );
 });
-export { createPlaylist, addSongs, getPlaylistSongs, getPlaylist };
+export { createPlaylist, addSongs, getPlaylistSongs, getPlaylists };
