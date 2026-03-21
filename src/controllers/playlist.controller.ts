@@ -33,68 +33,85 @@ const createPlaylist = asyncHandler(
       .json(new ApiResponse(HttpStatus.OK, "Successfully logged in", playlist));
   },
 );
-
 const getPlaylists = asyncHandler(async (req, res) => {
+  const userId = new Types.ObjectId(req.user.id);
+  const ownerId = new Types.ObjectId(env.OWNER_MONGOOSE_ID);
+
   const playlists = await Playlist.aggregate([
     {
-      $match: {
-        owner: new Types.ObjectId(req.user.id),
+      $match: { owner: userId },
+    },
+    {
+      $addFields: { songs: { $size: "$songs" } },
+    },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [{ $project: { username: 1 } }],
       },
     },
     {
-      $addFields: {
-        songs: { $size: "$songs" },
-      },
+      $unwind: { path: "$owner", preserveNullAndEmptyArrays: true },
     },
+
     {
       $unionWith: {
         coll: "likes",
         pipeline: [
-          {
-            $match: {
-              likedBy: new Types.ObjectId(req.user.id),
-            },
-          },
-          {
-            $group: {
-              _id: "$likedBy",
-              songs: { $count: {} },
-            },
-          },
+          { $match: { likedBy: userId } },
+          { $group: { _id: "$likedBy", songs: { $count: {} } } },
           {
             $addFields: {
               name: "Favourite Songs",
               description: "This playlist contains your favourite songs",
               status: "private",
               isDefault: true,
+              owner: userId,
             },
           },
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [{ $project: { username: 1 } }],
+            },
+          },
+          { $unwind: { path: "$owner", preserveNullAndEmptyArrays: true } },
         ],
       },
     },
+
     {
       $unionWith: {
         coll: "likes",
         pipeline: [
-          {
-            $match: {
-              likedBy: new Types.ObjectId(env.OWNER_MONGOOSE_ID),
-            },
-          },
-          {
-            $group: {
-              _id: "$likedBy",
-              songs: { $count: {} },
-            },
-          },
+          { $match: { likedBy: ownerId } },
+          { $group: { _id: "$likedBy", songs: { $count: {} } } },
           {
             $addFields: {
               name: "Owner's Favourite Songs",
               description: "This playlist contains owner's favourite songs",
               status: "public",
               isDefault: true,
+              owner: ownerId,
             },
           },
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [{ $project: { username: 1 } }],
+            },
+          },
+          { $unwind: { path: "$owner", preserveNullAndEmptyArrays: true } },
         ],
       },
     },
@@ -113,19 +130,17 @@ const getPlaylists = asyncHandler(async (req, res) => {
         },
       },
     },
-    {
-      $project: {
-        _id: 0,
-      },
-    },
+
+    { $project: { _id: 0 } },
   ]);
+
   res
     .status(HttpStatus.OK)
     .json(
       new ApiResponse(
         HttpStatus.OK,
         "Playlists fetched successfully",
-        playlists[0],
+        playlists[0] || { defaultPlaylists: [], personalPlaylists: [] },
       ),
     );
 });
@@ -181,12 +196,13 @@ const addSongs = asyncHandler(async (req, res) => {
 const getPlaylistSongs = asyncHandler(async (req, res) => {
   let { playlistId } = req.params;
   let { limit } = req.query;
+  let { cursor } = req.query;
+  const userId = new Types.ObjectId(req.user.id);
   const playlistSongs = await Playlist.aggregate([
     {
       $match: {
-        $expr: {
-          $eq: ["$_id", { $toObjectId: playlistId }],
-        },
+        $expr: { $eq: ["$_id", { $toObjectId: playlistId }] },
+        $or: [{ owner: userId }, { status: "public" }],
       },
     },
     {
@@ -196,6 +212,11 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
         foreignField: "_id",
         as: "songs",
         pipeline: [
+          ...(cursor ? [{
+            $match: {
+              _id: { $gt: new Types.ObjectId(cursor as string) }
+            }
+          }] : []),
           {
             $lookup: {
               from: "users",
@@ -212,6 +233,28 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
             },
           },
           {
+            $lookup: {
+              from: "likes",
+              let: { songId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ["$song", "$$songId"] },
+                        { $eq: ["$likedBy", userId] },
+                      ],
+                    },
+                  },
+                },
+              ],
+              as: "likedDocs",
+            },
+          },
+          {
+            $addFields: { isLiked: { $gt: [{ $size: "$likedDocs" }, 0] } },
+          },
+          {
             $project: {
               title: 1,
               duration: 1,
@@ -222,6 +265,7 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
               createdAt: 1,
               updatedAt: 1,
               playCount: 1,
+              isLiked: 1,
             },
           },
           { $limit: Number(limit) },
