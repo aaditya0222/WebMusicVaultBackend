@@ -93,7 +93,7 @@ const getSongById = asyncHandler(
 const deleteSongById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const id = req.params.id;
-    await deleteSongService(id);
+    await deleteSongService(id, req.user._id);
     res
       .status(HttpStatus.OK)
       .json(new ApiResponse(HttpStatus.OK, `song deleted successfully`, null));
@@ -127,7 +127,11 @@ const updateAllFieldsOfSong = asyncHandler(
       throw new ApiError(HttpStatus.BadRequest, "Invalid song id");
     }
     const data: updateSongRequest = req.body;
-    const updatedSong = await updateSongFieldsService({ ...data, songId });
+    const updatedSong = await updateSongFieldsService({
+      ...data,
+      songId,
+      userId: req.user._id,
+    });
     res
       .status(HttpStatus.OK)
       .send(

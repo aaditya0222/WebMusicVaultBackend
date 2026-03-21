@@ -43,6 +43,7 @@ const getPlaylistSongsSchema = z.object({
   }),
   query: z.object({
     limit: z.coerce.number().min(1).max(25).default(20),
+    cursor: z.string().optional(),
   }),
 });
 

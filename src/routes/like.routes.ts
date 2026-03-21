@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { toggleSongLike } from "../controllers/like.controller";
+import { toggleSongLike, getLikedSongs } from "../controllers/like.controller";
 import { validate } from "../middlewares/validate.middleware";
 import { likeSongSchema } from "../schemas/like.schema";
 import { authMiddleware } from "../middlewares/auth.middleware";
@@ -11,5 +11,7 @@ router.post(
   validate(likeSongSchema),
   toggleSongLike,
 );
+
+router.get("/:userId", authMiddleware, getLikedSongs);
 
 export default router;

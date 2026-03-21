@@ -138,10 +138,16 @@ const uploadSongService = async (
   };
 };
 
-const deleteSongService = async (id: idType): Promise<void> => {
-  const song = await Song.findByIdAndDelete(id);
+const deleteSongService = async (
+  id: idType,
+  userId: Types.ObjectId,
+): Promise<void> => {
+  const song = await Song.findOneAndDelete({ _id: id, owner: userId });
   if (!song) {
-    throw new ApiError(HttpStatus.NotFound, "Song not found");
+    throw new ApiError(
+      HttpStatus.Forbidden,
+      "You do not have permission to delete this song or it does not exist",
+    );
   }
   await deleteFile({ publicId: song.publicId, resource_type: "video" });
 };
@@ -167,11 +173,7 @@ const createCursorQuery = ({
     if (sortOrder === "asc") {
       return sortBy === "title"
         ? {
-            $or: [
-              {
-                [sortBy]: { $gt: cursorValue },
-              },
-            ],
+            [sortBy]: { $gt: cursorValue },
           }
         : {
             $or: [
@@ -187,11 +189,7 @@ const createCursorQuery = ({
     } else {
       return sortBy === "title"
         ? {
-            $or: [
-              {
-                [sortBy]: { $lt: cursorValue },
-              },
-            ],
+            [sortBy]: { $lt: cursorValue },
           }
         : {
             $or: [
@@ -305,10 +303,6 @@ const getSongsOrSearchSongsService = async ({
     },
   ];
   if (!isSearch) {
-    // songs = await Song.find(cursorQuery)
-    //   .sort(sort)
-    //   .limit(limit + 1)
-    //   .lean();
     songs = await Song.aggregate([
       ...createPipeline(cursorQuery),
       ...(userId ? likePipeline : []),
@@ -405,13 +399,14 @@ const getRandomSongService = async (
 //*Here after, the song update services will come. Think about flow then start to code furthur. Although the udpateSongFields schema is done, try reviewing it as per your logic
 const updateSongFieldsService = async ({
   songId,
+  userId,
   title,
   artist,
   tags,
   genre,
-}: updateSongRequest & { songId: string }): Promise<SongI> => {
+}: updateSongRequest & { songId: string; userId: Types.ObjectId }): Promise<SongI> => {
   const song = await Song.findOneAndUpdate(
-    { _id: songId },
+    { _id: songId, owner: userId },
     {
       $set: {
         ...(title && { title }),
@@ -432,7 +427,12 @@ const updateSongFieldsService = async ({
       new: true,
     },
   );
-  if (!song) throw new ApiError(HttpStatus.NotFound, "Song not found");
+  if (!song) {
+    throw new ApiError(
+      HttpStatus.Forbidden,
+      "You do not have permission to update this song or it does not exist",
+    );
+  }
 
   return song;
 };
