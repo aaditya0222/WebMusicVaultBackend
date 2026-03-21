@@ -134,6 +134,9 @@ const getPlaylists = asyncHandler(async (req, res) => {
     { $project: { _id: 0 } },
   ]);
 
+  if (playlists[0]["defaultPlaylists"][1].owner._id.equals(ownerId)) {
+    playlists[0]["defaultPlaylists"].pop();
+  }
   res
     .status(HttpStatus.OK)
     .json(
@@ -212,11 +215,15 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
         foreignField: "_id",
         as: "songs",
         pipeline: [
-          ...(cursor ? [{
-            $match: {
-              _id: { $gt: new Types.ObjectId(cursor as string) }
-            }
-          }] : []),
+          ...(cursor
+            ? [
+                {
+                  $match: {
+                    _id: { $gt: new Types.ObjectId(cursor as string) },
+                  },
+                },
+              ]
+            : []),
           {
             $lookup: {
               from: "users",
