@@ -41,18 +41,9 @@ const oauthLogin = asyncHandler(
     }
 
     const { accessToken, refreshToken } = await user.generateAuthTokens();
-    // res
-    //   .status(HttpStatus.OK)
-    //   .cookie("refreshToken", refreshToken, options)
-    //   .json(
-    //     new ApiResponse(HttpStatus.OK, "Successfully logged in", {
-    //       user,
-    //       accessToken,
-    //     }),
-    //   );
     res
       .cookie("refreshToken", refreshToken, options)
-      .redirect("http://localhost:3000?auth=success");
+      .redirect(`${env.FRONTEND_URL}?auth=success`);
   },
 );
 

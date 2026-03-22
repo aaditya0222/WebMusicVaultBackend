@@ -25,6 +25,7 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().min(1, "Cloudinary API key is required"),
   CLOUDINARY_API_SECRET: z.string().min(1, "Cloudinary API secret is required"),
   FRONTEND_URL: z.url("Frontend URL must be a valid URL"),
+  BACKEND_URL: z.url("Backend URL must be a valid URL"),
   GOOGLE_CLIENT_ID: z.string().min(1, "Google Client Id is required"),
   GOOGLE_CLIENT_SECRET: z.string().min(1, "Google Client Secret is required"),
   RESEND_EMAIL_API_KEY: z.string().min(1, "Resend Email API Key is required"),
