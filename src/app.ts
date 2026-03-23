@@ -30,7 +30,7 @@ const limiter = rateLimit({
 
 const strictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: env.NODE_ENV==="production"? 20: 1000,
   message:
     "Too many authentication attempts, please try again after 15 minutes",
   standardHeaders: true,
