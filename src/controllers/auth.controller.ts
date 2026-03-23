@@ -32,6 +32,8 @@ const options: CookieOptions = {
   sameSite: env.NODE_ENV === "production" ? "none" : "lax",
 };
 
+const oauthCodes = new Map<string, string>();
+
 const oauthLogin = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const user = req.user as UserI;
@@ -40,10 +42,35 @@ const oauthLogin = asyncHandler(
       throw new ApiError(500, "User not found after OAuth login");
     }
 
-    const { accessToken, refreshToken } = await user.generateAuthTokens();
+    const { refreshToken } = await user.generateAuthTokens();
+
+    const code = crypto.randomUUID();
+    oauthCodes.set(code, refreshToken);
+    setTimeout(() => oauthCodes.delete(code), 60_000);// js supports _ as commas of real life numbers.
+
+    res.redirect(`${env.FRONTEND_URL}?auth=success&code=${code}`);
+  },
+);
+
+const exchangeOauthCode = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { code } = req.query as { code: string };
+
+    if (!code) {
+      throw new ApiError(HttpStatus.BadRequest, "Code is required");
+    }
+
+    const refreshToken = oauthCodes.get(code);
+    if (!refreshToken) {
+      throw new ApiError(HttpStatus.BadRequest, "Invalid or expired code");
+    }
+
+    oauthCodes.delete(code); 
+
     res
+      .status(HttpStatus.OK)
       .cookie("refreshToken", refreshToken, options)
-      .redirect(`${env.FRONTEND_URL}?auth=success`);
+      .json(new ApiResponse(HttpStatus.OK, "Token exchanged successfully", null));
   },
 );
 
@@ -130,7 +157,6 @@ const verifyUsername = asyncHandler(
   },
 );
 
-//route for people who signed up with the oauth and now they are trying to login with normal local auth.So, they are asked to give otp send to their email and then set the password for their  id.
 const setPassword = asyncHandler(async (req: Request, res: Response) => {
   const data = req.body as SetPasswordRequest;
 
@@ -147,7 +173,6 @@ const setPassword = asyncHandler(async (req: Request, res: Response) => {
     );
 });
 
-//Otp Controllers
 const sendOtp = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { identifier } = req.body as SendOtpRequest["body"];
@@ -164,6 +189,7 @@ const sendOtp = asyncHandler(
       );
   },
 );
+
 const verifyEmail = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const data = req.body as VerifyEmailRequest;
@@ -205,6 +231,7 @@ export {
   logout,
   refreshAccessToken,
   oauthLogin,
+  exchangeOauthCode,
   sendOtp,
   verifyEmail,
 };

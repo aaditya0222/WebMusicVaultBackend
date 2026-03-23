@@ -10,6 +10,7 @@ import {
   oauthLogin,
   sendOtp,
   verifyEmail,
+  exchangeOauthCode
 } from "../controllers/auth.controller";
 import {
   registerSchema,
@@ -38,6 +39,7 @@ router.post("/set-password", validate(setPasswordSchema), setPassword);
 router.post("/login", validate(loginSchema), login);
 
 //Oauth login
+
 router.get(
   "/google",
   passport.authenticate("google", { scope: ["profile", "email"] }),
@@ -50,6 +52,7 @@ router.get(
   }),
   oauthLogin,
 );
+router.get("/auth/exchange-code", exchangeOauthCode);
 
 //Email verification
 router.post("/request-otp", validate(sendOtpSchema), sendOtp);

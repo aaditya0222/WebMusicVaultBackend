@@ -18,6 +18,7 @@ passport.use(
       cb /* can also use don or any other keyword instead of cb*/,
     ) => {
       try {
+        console.log(`${env.BACKEND_URL}/api/v1/auth/google/callback`);
         let user = await User.findOne({ googleId: profile.id });
         if (!user) {
           const email = profile.emails?.[0].value as string;
@@ -50,6 +51,7 @@ passport.use(
               isEmailVerified: true,
             });
           }
+          console.log("step 1");
         }
         return cb(null, user);
       } catch (err) {

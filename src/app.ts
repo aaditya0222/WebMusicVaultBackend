@@ -30,15 +30,16 @@ const limiter = rateLimit({
 
 const strictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20, 
-  message: "Too many authentication attempts, please try again after 15 minutes",
+  max: 20,
+  message:
+    "Too many authentication attempts, please try again after 15 minutes",
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 // 'trust proxy' is essential when deployed behind a reverse proxy (Vercel, Render, Nginx, etc.)
 // It allows the rate limiter to see the real user's IP instead of the proxy's IP.
-app.set("trust proxy", 1); 
+app.set("trust proxy", 1);
 
 app.use(
   cors({
