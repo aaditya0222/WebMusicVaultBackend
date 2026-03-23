@@ -52,7 +52,7 @@ router.get(
   }),
   oauthLogin,
 );
-router.get("/auth/exchange-code", exchangeOauthCode);
+router.get("/exchange-code", exchangeOauthCode);
 
 //Email verification
 router.post("/request-otp", validate(sendOtpSchema), sendOtp);
