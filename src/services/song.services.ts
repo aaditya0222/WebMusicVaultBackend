@@ -35,7 +35,7 @@ type cursorT =
       value: string | number | Date;
       _id?: string;
     }
-  | undefined;
+  | undefined
 
 interface getSongsOrSearchSongsServiceI {
   limit: number;

@@ -54,7 +54,8 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
   const ownerId = new Types.ObjectId(env.OWNER_MONGOOSE_ID);
   const targetUserId = new Types.ObjectId(userId);
   const parsedLimit = Number(limit) || 10;
-
+  let hasMoreSongs = false;
+  let nextCursor: string | undefined;
   // Only allow fetching own likes or owner's likes (which are public)
   if (!targetUserId.equals(currentUserId) && !targetUserId.equals(ownerId)) {
     throw new ApiError(
@@ -63,7 +64,7 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
     );
   }
 
-  const likedSongs = await Like.aggregate([
+  const songs = await Like.aggregate([
     {
       $match: {
         likedBy: targetUserId,
@@ -73,7 +74,7 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
           : {}),
       },
     },
-    { $limit: parsedLimit },
+    { $limit: parsedLimit+1 },
     {
       $lookup: {
         from: "songs",
@@ -138,10 +139,17 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
     { $unwind: "$song" },
     { $replaceRoot: { newRoot: "$song" } },
   ]);
-
+   if (songs.length > parsedLimit) {
+    hasMoreSongs = true;
+    songs.pop();
+  }
+  if (!hasMoreSongs || songs.length === 0) {
+    nextCursor = undefined;
+  } else {
+     nextCursor = songs[songs.length - 1]._id
+  }
   const isOwnerFavourite = targetUserId.equals(ownerId);
-  res.status(HttpStatus.OK).json(
-    new ApiResponse(HttpStatus.OK, "Liked songs fetched successfully", {
+  const data =  {
       _id: userId,
       name: isOwnerFavourite ? "Owner's Favourite Songs" : "Favourite Songs",
       description: isOwnerFavourite
@@ -149,8 +157,13 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
         : "This playlist contains your favourite songs",
       status: isOwnerFavourite ? "public" : "private",
       isDefault: true,
-      songs: likedSongs,
-    }),
+      songs,
+      nextCursor,
+      hasMoreSongs
+    }
+
+  res.status(HttpStatus.OK).json(
+    new ApiResponse(HttpStatus.OK, "Liked songs fetched successfully",data),
   );
 });
 

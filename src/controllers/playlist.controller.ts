@@ -197,13 +197,14 @@ const addSongs = asyncHandler(async (req, res) => {
     }),
   );
 });
-
 const getPlaylistSongs = asyncHandler(async (req, res) => {
-  let { playlistId } = req.params;
-  let { limit } = req.query;
-  let { cursor } = req.query;
+  const { playlistId } = req.params;
+  const { limit, cursor } = req.query;
+
+  const parsedLimit = Number(limit) || 10;
   const userId = new Types.ObjectId(req.user.id);
-  const playlistSongs = await Playlist.aggregate([
+
+  const songsData = await Playlist.aggregate([
     {
       $match: {
         $expr: { $eq: ["$_id", { $toObjectId: playlistId }] },
@@ -226,6 +227,11 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
                 },
               ]
             : []),
+
+          { $sort: { _id: 1 } },
+
+          { $limit: parsedLimit + 1 },
+
           {
             $lookup: {
               from: "users",
@@ -261,7 +267,9 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
             },
           },
           {
-            $addFields: { isLiked: { $gt: [{ $size: "$likedDocs" }, 0] } },
+            $addFields: {
+              isLiked: { $gt: [{ $size: "$likedDocs" }, 0] },
+            },
           },
           {
             $project: {
@@ -277,24 +285,37 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
               isLiked: 1,
             },
           },
-          { $limit: Number(limit) },
         ],
       },
     },
   ]);
 
-  if (!playlistSongs.length) {
+  if (!songsData.length) {
     throw new ApiError(HttpStatus.NotFound, "Invalid Playlist");
   }
 
-  res
-    .status(HttpStatus.OK)
-    .json(
-      new ApiResponse(
-        HttpStatus.OK,
-        "Playlist songs fetched successfully",
-        playlistSongs[0],
-      ),
-    );
+  const playlist = songsData[0];
+  let songs = playlist.songs;
+
+  let hasMoreSongs = false;
+  let nextCursor: string | undefined = undefined;
+
+  if (songs.length > parsedLimit) {
+    hasMoreSongs = true;
+    songs.pop(); 
+  }
+
+  if (songs.length > 0) {
+    nextCursor = songs[songs.length - 1]._id.toString();
+  }
+
+  res.status(HttpStatus.OK).json(
+    new ApiResponse(HttpStatus.OK, "Playlist songs fetched successfully", {
+      ...playlist,
+      songs,
+      nextCursor,
+      hasMoreSongs,
+    }),
+  );
 });
 export { createPlaylist, addSongs, getPlaylistSongs, getPlaylists };
