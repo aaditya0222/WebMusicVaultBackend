@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { GENRES, TAGS } from "../models/song.model";
+// import { GENRES, TAGS } from "../models/song.model";
 
 export const mongoId = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ID");
 
@@ -8,24 +8,27 @@ const artist = z
   .trim()
   .min(1, "artist must be at least of 1 characters")
   .max(30, "artist must be less than or equal to 30 characters")
-  .regex(/^[a-zA-Z0-9._ ]+$/, "artist can only contain lowercase letters")
+  .regex(
+    /^[a-zA-Z0-9._ ]+$/,
+    "artist can only contain letters, numbers, dots, underscores or spaces",
+  )
   .transform((u) => u.toLowerCase());
 
 const title = z
   .string()
   .trim()
   .min(1, "Title must be at least of 1 characters")
-  .max(125, "Lenght of title must be less than or equal to 125 characters")
+  .max(125, "Length of title must be less than or equal to 125 characters")
   .optional();
-const genre = z.enum(GENRES).optional();
-const tags = z.array(z.enum(TAGS)).optional();
+// const genre = z.enum(GENRES).optional();
+// const tags = z.array(z.enum(TAGS)).optional();
 
 const uploadSongSchema = z.object({
   body: z.object({
     title,
     artist: artist.optional(),
-    genre,
-    tags,
+    // genre,
+    // tags,
   }),
 });
 
@@ -44,9 +47,9 @@ const basePaginationSchema = z.object({
 });
 
 const searchFieldsSchema = z.object({
-  query: z.string().trim().min(1).optional(),
-  genre,
-  tags,
+  query: z.string().trim().min(1).max(50),
+  // genre,
+  // tags,
 });
 
 const cursorPreprocess = (input: unknown) => {
@@ -78,35 +81,35 @@ const songSchema = z
   .min(1, "At least 1 song is required")
   .max(3, "At most 3 songs are allowed");
 
-const getRandomSongSchema = z.preprocess(
-  (data: any) => {
-    if (!data || typeof data !== "object") {
-      return {};
-    }
-    const d = data as Record<string, unknown>;
-    const parsedData = {
-      ...d,
-      tags: d.tags
-        ? Array.isArray(data.tags)
-          ? data.tags
-          : [data.tags]
-        : undefined,
-    };
-    return parsedData;
-  },
-  z.object({
-    genre,
-    tags,
-  }),
-);
+// const getRandomSongSchema = z.preprocess(
+//   (data: any) => {
+//     if (!data || typeof data !== "object") {
+//       return {};
+//     }
+//     const d = data as Record<string, unknown>;
+//     const parsedData = {
+//       ...d,
+//       tags: d.tags
+//         ? Array.isArray(data.tags)
+//           ? data.tags
+//           : [data.tags]
+//         : undefined,
+//     };
+//     return parsedData;
+//   },
+// z.object({
+//   genre,
+//   tags,
+// }),
+// );
 
 const updateSongSchema = z.object({
   params: z.object({ id: mongoId }),
   body: z.object({
     title,
     artist: artist.optional(),
-    genre,
-    tags,
+    // genre,
+    // tags,
   }),
 });
 
@@ -118,7 +121,7 @@ type songType = z.infer<typeof songSchema>;
 type idType = z.infer<typeof mongoId>;
 type parsedSongsQuery = z.infer<typeof getSongsSchema> &
   Partial<z.infer<typeof searchSongsSchema>>;
-type getRandomSongRequest = z.infer<typeof getRandomSongSchema>;
+// type getRandomSongRequest = z.infer<typeof getRandomSongSchema>;
 export {
   uploadSongSchema,
   idParamSchema,
@@ -131,6 +134,6 @@ export {
   updateSongSchema,
   updateSongRequest,
   parsedSongsQuery,
-  getRandomSongSchema,
-  getRandomSongRequest,
+  // getRandomSongSchema,
+  // getRandomSongRequest,
 };

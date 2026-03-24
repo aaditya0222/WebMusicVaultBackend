@@ -53,7 +53,7 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
   const currentUserId = new Types.ObjectId(req.user.id);
   const ownerId = new Types.ObjectId(env.OWNER_MONGOOSE_ID);
   const targetUserId = new Types.ObjectId(userId);
-  const parsedLimit = Number(limit) || 20;
+  const parsedLimit = Number(limit) || 10;
 
   // Only allow fetching own likes or owner's likes (which are public)
   if (!targetUserId.equals(currentUserId) && !targetUserId.equals(ownerId)) {

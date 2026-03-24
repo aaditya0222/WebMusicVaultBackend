@@ -7,7 +7,7 @@ import type { SongI } from "../models/song.model";
 import { PipelineStage, SortOrder, Types } from "mongoose";
 import { env } from "../config/env";
 import {
-  getRandomSongRequest,
+  // getRandomSongRequest,
   idType,
   songType,
   updateSongRequest,
@@ -43,9 +43,8 @@ interface getSongsOrSearchSongsServiceI {
   sortOrder: "asc" | "desc";
   cursor: cursorT;
   query?: string;
-  genre?: string;
-  tags?: string[];
-  isSearch: boolean;
+  // genre?: string;
+  // tags?: string[];
   userId?: Types.ObjectId;
 }
 
@@ -92,8 +91,8 @@ const uploadSongService = async (
         fileUrl: uploadResult.secure_url,
         artist: body.artist,
         owner: userId,
-        tags: body.tags,
-        genre: body.genre,
+        // tags: body.tags,
+        // genre: body.genre,
       });
       return { type: "uploaded", song };
     } catch (error) {
@@ -227,9 +226,8 @@ const getSongsOrSearchSongsService = async ({
   cursor,
   limit,
   query,
-  genre,
-  tags,
-  isSearch,
+  // genre,
+  // tags,
   userId,
 }: getSongsOrSearchSongsServiceI): Promise<{
   songs: SongI[];
@@ -239,6 +237,7 @@ const getSongsOrSearchSongsService = async ({
   let songs;
   let hasMoreSongs = false;
   let nextCursor: cursorT;
+  const isSearch = !!query;
   const cursorQuery = createCursorQuery({ sortBy, sortOrder, cursor });
   const sort: Record<string, 1 | -1> = {
     //$sort requires 1 or -1 not the SortOrder type;
@@ -310,23 +309,27 @@ const getSongsOrSearchSongsService = async ({
     ]);
   } else {
     const dbSearchQuery: FilterQuery<SongI> = {
-      ...(query && {
-        $and: [
-          ...query.split(" ").map((word) => {
-            return {
-              $or: [
-                { title: { $regex: word, $options: "i" } },
-                { artist: { $regex: word, $options: "i" } },
-              ],
-            };
-          }),
-          cursorQuery,
-        ],
-      }),
-      ...(tags && { tags: { $in: tags } }),
-      ...(genre && { genre }),
+      $and: [
+        ...query.split(/\s+/).map((word) => {
+          return {
+            $or: [
+              { title: { $regex: word, $options: "i" } },
+              { artist: { $regex: word, $options: "i" } },
+            ],
+          };
+        }),
+        cursorQuery,
+      ],
     };
-
+    // ...(tags && { tags: { $in: tags } }),
+    // ...(genre && { genre }),
+    // };
+    // const dbSearchQuery: FilterQuery<SongI> = {
+    //   $text: {
+    //     $search: query as string,
+    //   },
+    //   ...cursorQuery,
+    // };
     // songs = await Song.find(dbSearchQuery)
     //   .sort(sort)
     //   .limit(limit + 1)
@@ -367,25 +370,24 @@ const getSongsOrSearchSongsService = async ({
   return { songs, nextCursor, hasMoreSongs };
 };
 
-const getRandomSongService = async (
-  query: getRandomSongRequest,
-): Promise<SongI | null> => {
-  const { genre, tags } = query;
+const getRandomSongService = async () // query: getRandomSongRequest,
+: Promise<SongI | null> => {
+  // const { genre, tags } = query;
 
-  const orFilters: Record<string, unknown>[] = [];
+  // const orFilters: Record<string, unknown>[] = [];
 
-  if (genre) {
-    orFilters.push({ genre });
-  }
+  // if (genre) {
+  //   orFilters.push({ genre });
+  // }
 
-  if (tags && tags.length > 0) {
-    orFilters.push({ tags: { $in: tags } });
-  }
+  // if (tags && tags.length > 0) {
+  //   orFilters.push({ tags: { $in: tags } });
+  // }
 
-  const matchStage = orFilters.length > 0 ? { $or: orFilters } : {};
+  // const matchStage = orFilters.length > 0 ? { $or: orFilters } : {};
 
   const randomSongArray = await Song.aggregate([
-    { $match: matchStage },
+    // { $match: matchStage },
     { $sample: { size: 1 } },
   ]);
 
@@ -402,26 +404,29 @@ const updateSongFieldsService = async ({
   userId,
   title,
   artist,
-  tags,
-  genre,
-}: updateSongRequest & { songId: string; userId: Types.ObjectId }): Promise<SongI> => {
+  // tags,
+  // genre,
+}: updateSongRequest & {
+  songId: string;
+  userId: Types.ObjectId;
+}): Promise<SongI> => {
   const song = await Song.findOneAndUpdate(
     { _id: songId, owner: userId },
     {
       $set: {
         ...(title && { title }),
         ...(artist && { artist }),
-        ...(genre && { genre }),
+        // ...(genre && { genre }),
       },
-      ...(tags
-        ? {
-            $addToSet: {
-              tags: { $each: tags },
-            },
-          }
-        : {
-            tags: [],
-          }),
+      // ...(tags
+      //   ? {
+      //       $addToSet: {
+      //         tags: { $each: tags },
+      //       },
+      //     }
+      //   : {
+      //       tags: [],
+      //     }),
     },
     {
       new: true,
