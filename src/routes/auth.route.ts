@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { env } from "../config/env";
 import {
   register,
   login,
@@ -10,7 +11,7 @@ import {
   oauthLogin,
   sendOtp,
   verifyEmail,
-  exchangeOauthCode
+  exchangeOauthCode,
 } from "../controllers/auth.controller";
 import {
   registerSchema,
@@ -48,7 +49,7 @@ router.get(
   "/google/callback",
   passport.authenticate("google", {
     session: false,
-    failureRedirect: "/login?auth=error",
+    failureRedirect: `${env.FRONTEND_URL}?auth=error`,
   }),
   oauthLogin,
 );
