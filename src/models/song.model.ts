@@ -103,7 +103,8 @@ export interface SongI {
   publicId: string;
   fileUrl: string;
   owner: Types.ObjectId;
-  coverImageUrl: string;
+  coverImageUrl?: string;
+  coverImagePublicId?: string;
   // genre?: Genre;
   // tags?: Tags[];
   playCount: number;
@@ -119,6 +120,7 @@ const songSchema = new Schema<SongI>(
     publicId: { type: String, required: true },
     fileUrl: { type: String, required: true },
     coverImageUrl: String,
+    coverImagePublicId: String,
     owner: {
       type: Schema.Types.ObjectId,
       ref: "User",

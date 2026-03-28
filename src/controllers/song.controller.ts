@@ -15,35 +15,31 @@ import {
   getSongsSchema,
   searchSongsSchema,
   uploadSongRequest,
-  songSchema,
   updateSongRequest,
   parsedSongsQuery,
+  songFilesSchema,
   // getRandomSongSchema,
   // getRandomSongRequest,
 } from "../schemas/song.schema";
 
-const uploadSongs = asyncHandler(
+const uploadSong = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const body: uploadSongRequest = req.body;
-    const files = songSchema.parse(req.files);
+    const files = songFilesSchema.parse(req.files);
 
     const uploadRes = await uploadSongService(body, files, req.user._id);
-    let msg = "";
-    if (uploadRes.uploaded.length === 0 && uploadRes.skipped.length > 0) {
-      msg = "All songs were skipped or failed to upload.";
-    } else if (uploadRes.uploaded.length > 0 && uploadRes.skipped.length > 0) {
-      msg = `${uploadRes.uploaded.length} song(s) uploaded successfully. ${uploadRes.skipped.length} skipped.`;
-    } else if (uploadRes.uploaded.length > 0) {
-      msg = `${uploadRes.uploaded.length} song(s) uploaded successfully.`;
-    } else {
-      msg = "No files were uploaded.";
-    }
+
     res
       .status(HttpStatus.Created)
-      .json(new ApiResponse(HttpStatus.Created, msg, uploadRes));
+      .json(
+        new ApiResponse(
+          HttpStatus.Created,
+          "Song uploaded successfully",
+          uploadRes,
+        ),
+      );
   },
 );
-
 const getSongsOrSearchSongs = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     // const isSearch = Object.keys(req.query).some((key) =>
@@ -154,7 +150,7 @@ const getAllSongOfArtist = asyncHandler(
   async (req: Request, res: Response) => {},
 );
 export {
-  uploadSongs,
+  uploadSong,
   getSongById,
   deleteSongById,
   getRandomSong,

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { file, z } from "zod";
 // import { GENRES, TAGS } from "../models/song.model";
 
 export const mongoId = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ID");
@@ -76,10 +76,11 @@ const searchSongsSchema = z.preprocess(
 const idParamSchema = z.object({
   params: z.object({ id: mongoId }),
 });
-const songSchema = z
-  .array(z.custom<Express.Multer.File>())
-  .min(1, "At least 1 song is required")
-  .max(3, "At most 3 songs are allowed");
+const fileSchema = z.custom<Express.Multer.File>();
+const songFilesSchema = z.object({
+  song: fileSchema,
+  coverImage: fileSchema.optional(),
+});
 
 // const getRandomSongSchema = z.preprocess(
 //   (data: any) => {
@@ -117,7 +118,7 @@ type uploadSongRequest = z.infer<typeof uploadSongSchema>["body"];
 type updateSongParams = z.infer<typeof updateSongSchema>["params"];
 type updateSongBody = z.infer<typeof updateSongSchema>["body"];
 type updateSongRequest = updateSongParams & updateSongBody;
-type songType = z.infer<typeof songSchema>;
+type songFileType = z.infer<typeof songFilesSchema>;
 type idType = z.infer<typeof mongoId>;
 type parsedSongsQuery = z.infer<typeof getSongsSchema> &
   Partial<z.infer<typeof searchSongsSchema>>;
@@ -127,8 +128,8 @@ export {
   idParamSchema,
   idType,
   uploadSongRequest,
-  songSchema,
-  songType,
+  songFilesSchema,
+  songFileType,
   getSongsSchema,
   searchSongsSchema,
   updateSongSchema,

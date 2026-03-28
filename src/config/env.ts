@@ -36,6 +36,13 @@ const envSchema = z.object({
     .refine((n) => !isNaN(n), {
       message: "Music file size must be a positive integer",
     }),
+  MAX_COVER_IMAGE_FILE_SIZE: z
+    .string()
+    .min(1, "Max cover image file size must be a valid number in string format")
+    .transform((n) => parseInt(n, 10))
+    .refine((n) => !isNaN(n), {
+      message: "Cover image file size must be a positive integer",
+    }),
   GMAIL_USER: z.string().min(1, "Email is required"),
   GMAIL_APP_PASSWORD: z.string().min(1, "Gmail app password Key is required"),
   OWNER_MONGOOSE_ID: z

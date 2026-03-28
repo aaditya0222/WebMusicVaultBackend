@@ -3,7 +3,7 @@ const router = Router();
 import { upload } from "../middlewares/multer.middleware";
 
 import {
-  uploadSongs,
+  uploadSong,
   getSongById,
   deleteSongById,
   getRandomSong,
@@ -27,9 +27,13 @@ import {
 router.post(
   "/",
   authMiddleware,
-  upload.array("songs", 3),
+  // upload.array("songs", 3),
+  upload.fields([
+    { name: "song", maxCount: 1 },
+    { name: "coverImage", maxCount: 1 },
+  ]),
   validate(uploadSongSchema),
-  uploadSongs,
+  uploadSong,
 );
 //Get songs for main page and for searching songs
 router.get("/", authMiddlewareNotStrict, getSongsOrSearchSongs);

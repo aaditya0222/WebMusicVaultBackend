@@ -1,15 +1,13 @@
 import ApiError from "../utils/ApiError";
 import { HttpStatus } from "../utils/HttpStatus";
-import { UploadApiResponse, UploadApiErrorResponse } from "cloudinary";
+import { UploadApiResponse } from "cloudinary";
 import { deleteFile, uploadFile } from "../config/cloudinary";
 import Song from "../models/song.model";
 import type { SongI } from "../models/song.model";
 import { PipelineStage, SortOrder, Types } from "mongoose";
 import { env } from "../config/env";
 import {
-  // getRandomSongRequest,
   idType,
-  songType,
   updateSongRequest,
   uploadSongRequest,
 } from "../schemas/song.schema";
@@ -35,7 +33,7 @@ type cursorT =
       value: string | number | Date;
       _id?: string;
     }
-  | undefined
+  | undefined;
 
 interface getSongsOrSearchSongsServiceI {
   limit: number;
@@ -48,95 +46,75 @@ interface getSongsOrSearchSongsServiceI {
   userId?: Types.ObjectId;
 }
 
-type uploadResultReturnT =
-  | {
-      type: "skipped";
-      title: string;
-      reason: string;
-    }
-  | {
-      type: "uploaded";
-      song: SongI;
-    };
-
-const makeSkipped = (file: Express.Multer.File, reason: string) => ({
-  type: "skipped" as "skipped",
-  title: file.originalname,
-  reason,
-});
-
 const uploadSongService = async (
   body: uploadSongRequest,
-  files: songType,
+  files: { song: Express.Multer.File; coverImage?: Express.Multer.File },
   userId: Types.ObjectId,
-): Promise<uploadSongResponse> => {
-  const tasks = files.map(async (file): Promise<uploadResultReturnT> => {
-    let uploadResult: UploadApiResponse | UploadApiErrorResponse | undefined;
-    try {
-      uploadResult = await uploadFile({
-        buffer: file.buffer,
-        folder: "songs",
+): Promise<{ song: SongI }> => {
+  let songUploadResult: UploadApiResponse | undefined;
+  let coverUploadResult: UploadApiResponse | undefined;
+
+  try {
+    songUploadResult = await uploadFile({
+      buffer: files.song.buffer,
+      folder: "songs",
+      resource_type: "video",
+    });
+
+    if (!songUploadResult || "error" in songUploadResult) {
+      throw new Error("There was a problem while uploading song");
+    }
+    if (files.coverImage) {
+      coverUploadResult = await uploadFile({
+        buffer: files.coverImage.buffer,
+        folder: "coverImages",
+        resource_type: "image",
+      });
+
+      if (!coverUploadResult || "error" in coverUploadResult) {
+        throw new Error("There was a problem while uploading cover image");
+      }
+    }
+
+    const song = await Song.create({
+      title: body.title ?? files.song.originalname,
+      duration: songUploadResult.duration,
+      publicId: songUploadResult.public_id,
+      fileUrl: songUploadResult.secure_url,
+      coverImage: coverUploadResult?.secure_url,
+      coverImagePublicId: coverUploadResult?.public_id,
+      artist: body.artist,
+      owner: userId,
+    });
+
+    return { song };
+  } catch (error) {
+    env.NODE_ENV === "development" && console.error(error);
+
+    // Cleanup whatever got uploaded before the failure
+    if (songUploadResult?.public_id) {
+      await deleteFile({
+        publicId: songUploadResult.public_id,
         resource_type: "video",
       });
-      if (!uploadResult) {
-        throw new Error("There was a problem while uplodading song");
-      }
-      if ("error" in uploadResult) {
-        return makeSkipped(file, "Unexpected error while uploading");
-      }
-      const song = await Song.create({
-        title: body.title ? body.title : file.originalname,
-        duration: uploadResult.duration,
-        publicId: uploadResult.public_id,
-        fileUrl: uploadResult.secure_url,
-        artist: body.artist,
-        owner: userId,
-        // tags: body.tags,
-        // genre: body.genre,
+    }
+    if (coverUploadResult?.public_id) {
+      await deleteFile({
+        publicId: coverUploadResult.public_id,
+        resource_type: "image",
       });
-      return { type: "uploaded", song };
-    } catch (error) {
-      env.NODE_ENV === "development" && console.error(error);
-      if (uploadResult?.public_id) {
-        await deleteFile({
-          publicId: uploadResult.public_id,
-          resource_type: "video",
-        });
-        if (error instanceof MongoServerError && error.code === 11000) {
-          //11000 is code for duplicate document returned by mongoose itslef
-          return makeSkipped(file, "Song is already uploaded.");
-          //this is for race conditions when 2 users upload same song and this helps to reduce one database fetching for exisitng user check and this works when unique is true in the fieldname in the schema
-        }
-        return makeSkipped(file, "Unexpected error while uploading");
-      }
-      return makeSkipped(file, "Unexpected error while uploading");
     }
-  });
 
-  const results = await Promise.allSettled(tasks);
-  const uploadedSongs: SongI[] = [];
-  const skippedSongs: skippedT = [];
-
-  for (const r of results) {
-    if (r.status === "fulfilled") {
-      if (r.value.type === "uploaded") {
-        uploadedSongs.push(r.value.song);
-      } else {
-        skippedSongs.push({ title: r.value.title, reason: r.value.reason });
-      }
+    if (error instanceof MongoServerError && error.code === 11000) {
+      throw new ApiError(HttpStatus.Conflict, "Song already exists");
     }
+
+    throw new ApiError(
+      HttpStatus.InternalServerError,
+      "Unexpected error while uploading",
+    );
   }
-  return {
-    uploaded: uploadedSongs,
-    skipped: skippedSongs,
-    summary: {
-      totalFiles: files.length,
-      uploadCount: uploadedSongs.length,
-      skippedCount: skippedSongs.length,
-    },
-  };
 };
-
 const deleteSongService = async (
   id: idType,
   userId: Types.ObjectId,

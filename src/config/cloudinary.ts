@@ -14,7 +14,7 @@ cloudinary.config({
 type resource_type = "video" | "image";
 type uploadParams = {
   buffer: Buffer;
-  folder: "songs" | "avatars";
+  folder: "songs" | "avatars" | "coverImages";
   resource_type: resource_type;
 };
 const uploadFile = async ({
