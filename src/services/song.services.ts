@@ -46,6 +46,16 @@ interface getSongsOrSearchSongsServiceI {
   userId?: Types.ObjectId;
 }
 
+import rateLimit from "express-rate-limit";
+
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // 10 uploads per hour
+  message: { status: 429, message: "Too many uploads, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const uploadSongService = async (
   body: uploadSongRequest,
   files: { song: Express.Multer.File; coverImage?: Express.Multer.File },
@@ -81,7 +91,7 @@ const uploadSongService = async (
       duration: songUploadResult.duration,
       publicId: songUploadResult.public_id,
       fileUrl: songUploadResult.secure_url,
-      coverImage: coverUploadResult?.secure_url,
+      coverImageUrl: coverUploadResult?.secure_url,
       coverImagePublicId: coverUploadResult?.public_id,
       artist: body.artist,
       owner: userId,
@@ -425,4 +435,5 @@ export {
   deleteSongService,
   getRandomSongService,
   updateSongFieldsService,
+  uploadLimiter,
 };

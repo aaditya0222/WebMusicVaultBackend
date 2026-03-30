@@ -78,8 +78,11 @@ const idParamSchema = z.object({
 });
 const fileSchema = z.custom<Express.Multer.File>();
 const songFilesSchema = z.object({
-  song: fileSchema,
-  coverImage: fileSchema.optional(),
+  song: z.array(fileSchema).transform((arr) => arr[0]),
+  coverImage: z
+    .array(fileSchema)
+    .transform((arr) => arr[0])
+    .optional(),
 });
 
 // const getRandomSongSchema = z.preprocess(

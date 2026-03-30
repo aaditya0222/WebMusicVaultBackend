@@ -22,10 +22,12 @@ import {
   authMiddleware,
   authMiddlewareNotStrict,
 } from "../middlewares/auth.middleware";
+import { uploadLimiter } from "../services/song.services";
 
 //Upload song
 router.post(
   "/",
+  uploadLimiter,
   authMiddleware,
   // upload.array("songs", 3),
   upload.fields([

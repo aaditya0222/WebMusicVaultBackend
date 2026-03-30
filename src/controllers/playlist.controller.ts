@@ -133,8 +133,6 @@ const getPlaylists = asyncHandler(async (req, res) => {
 
     { $project: { _id: 0 } },
   ]);
-  console.log(playlists[0]["defaultPlaylists"]);
-  console.log("owner's id is ", ownerId);
   if (userId.equals(ownerId)) {
     playlists[0]["defaultPlaylists"].pop();
   }
@@ -302,7 +300,7 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
 
   if (songs.length > parsedLimit) {
     hasMoreSongs = true;
-    songs.pop(); 
+    songs.pop();
   }
 
   if (songs.length > 0) {

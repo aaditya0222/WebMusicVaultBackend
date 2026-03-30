@@ -30,7 +30,7 @@ const limiter = rateLimit({
 
 const strictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: env.NODE_ENV==="production"? 20: 1000,
+  max: env.NODE_ENV === "production" ? 20 : 1000,
   message:
     "Too many authentication attempts, please try again after 15 minutes",
   standardHeaders: true,
@@ -56,7 +56,8 @@ app.use(
 
 app.use(helmet());
 app.use(limiter);
-app.use("/api/v1/auth", strictLimiter); // Apply strict limit to auth only
+app.use("/api/v1/auth", strictLimiter);
+app.use("/api/v1/song", strictLimiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
