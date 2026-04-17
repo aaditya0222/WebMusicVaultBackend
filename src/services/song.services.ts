@@ -358,8 +358,8 @@ const getSongsOrSearchSongsService = async ({
   return { songs, nextCursor, hasMoreSongs };
 };
 
-const getRandomSongService = async () // query: getRandomSongRequest,
-: Promise<SongI | null> => {
+const getRandomSongService = async (count: number) // query: getRandomSongRequest,
+: Promise<SongI[] | null> => {
   // const { genre, tags } = query;
 
   // const orFilters: Record<string, unknown>[] = [];
@@ -376,14 +376,14 @@ const getRandomSongService = async () // query: getRandomSongRequest,
 
   const randomSongArray = await Song.aggregate([
     // { $match: matchStage },
-    { $sample: { size: 1 } },
+    { $sample: { size: count } },
   ]);
 
   if (!randomSongArray.length) {
     return null;
   }
 
-  return randomSongArray[0];
+  return randomSongArray;
 };
 
 //*Here after, the song update services will come. Think about flow then start to code furthur. Although the udpateSongFields schema is done, try reviewing it as per your logic

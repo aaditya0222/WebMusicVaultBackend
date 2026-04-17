@@ -52,6 +52,10 @@ const searchFieldsSchema = z.object({
   // tags,
 });
 
+const countParamSchema = z.object({
+  params: z.object({ count: z.coerce.number().min(1).max(25).default(10) }),
+});
+
 const cursorPreprocess = (input: unknown) => {
   if (!input || typeof input !== "object") {
     return {};
@@ -138,6 +142,7 @@ export {
   updateSongSchema,
   updateSongRequest,
   parsedSongsQuery,
+  countParamSchema
   // getRandomSongSchema,
   // getRandomSongRequest,
 };

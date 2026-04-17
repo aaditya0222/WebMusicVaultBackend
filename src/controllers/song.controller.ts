@@ -18,6 +18,7 @@ import {
   updateSongRequest,
   parsedSongsQuery,
   songFilesSchema,
+  countParamSchema,
   // getRandomSongSchema,
   // getRandomSongRequest,
 } from "../schemas/song.schema";
@@ -91,7 +92,7 @@ const getSongById = asyncHandler(
 );
 const deleteSongById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const id = req.params.id;
+    const id = req.params.id
     await deleteSongService(id, req.user._id);
     res
       .status(HttpStatus.OK)
@@ -101,8 +102,9 @@ const deleteSongById = asyncHandler(
 //this must be furthur extend to give random songs as per the given genre, tag , author or artist
 const getRandomSong = asyncHandler(async (req: Request, res: Response) => {
   // const query: getRandomSongRequest = getRandomSongSchema.parse(req.query);
-  const randomSong = await getRandomSongService();
-  if (!randomSong) {
+  const {params: {count}} = countParamSchema.parse(req)
+  const randomSongs = await getRandomSongService(count);
+  if (!randomSongs) {
     res
       .status(HttpStatus.OK)
       .send(new ApiResponse(HttpStatus.OK, "No songs found", null));
@@ -114,7 +116,7 @@ const getRandomSong = asyncHandler(async (req: Request, res: Response) => {
       new ApiResponse(
         HttpStatus.OK,
         "Successfully sent a random song",
-        randomSong,
+        randomSongs,
       ),
     );
 });

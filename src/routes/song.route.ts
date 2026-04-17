@@ -40,7 +40,7 @@ router.post(
 //Get songs for main page and for searching songs
 router.get("/", authMiddlewareNotStrict, getSongsOrSearchSongs);
 //Get random songs for shuffle play
-router.get("/random", getRandomSong);
+router.get("/random/:count", getRandomSong);
 //Get all songs of a particular artist
 router.get("/artist/:artist", getAllSongOfArtist);
 //Get song by id
