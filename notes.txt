@@ -48,3 +48,7 @@ example-> feat: added like feature
 
 
 for checking purposes if a document exists in db, do Model.exist not Model.findOne and so.
+
+
+actually the backend get rand song should have a count option to specify how much random song u need so that too much unnecessary fetches we can stop  i mean we can fetch 10 random songs once an djust show user one by one i mean don't sh ow them 
+the song unless it's not played or its c hance has not come basically in queue
