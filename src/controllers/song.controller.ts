@@ -92,7 +92,7 @@ const getSongById = asyncHandler(
 );
 const deleteSongById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const id = req.params.id
+    const id = req.params.id;
     await deleteSongService(id, req.user._id);
     res
       .status(HttpStatus.OK)
@@ -102,8 +102,11 @@ const deleteSongById = asyncHandler(
 //this must be furthur extend to give random songs as per the given genre, tag , author or artist
 const getRandomSong = asyncHandler(async (req: Request, res: Response) => {
   // const query: getRandomSongRequest = getRandomSongSchema.parse(req.query);
-  const {params: {count}} = countParamSchema.parse(req)
-  const randomSongs = await getRandomSongService(count);
+  const {
+    params: { count },
+  } = countParamSchema.parse(req);
+  const userId = req.user?._id;
+  const randomSongs = await getRandomSongService(count, userId);
   if (!randomSongs) {
     res
       .status(HttpStatus.OK)

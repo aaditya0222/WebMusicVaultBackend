@@ -358,25 +358,43 @@ const getSongsOrSearchSongsService = async ({
   return { songs, nextCursor, hasMoreSongs };
 };
 
-const getRandomSongService = async (count: number) // query: getRandomSongRequest,
-: Promise<SongI[] | null> => {
-  // const { genre, tags } = query;
-
-  // const orFilters: Record<string, unknown>[] = [];
-
-  // if (genre) {
-  //   orFilters.push({ genre });
-  // }
-
-  // if (tags && tags.length > 0) {
-  //   orFilters.push({ tags: { $in: tags } });
-  // }
-
-  // const matchStage = orFilters.length > 0 ? { $or: orFilters } : {};
+const getRandomSongService = async (
+  count: number,
+  userId: Types.ObjectId,
+): Promise<SongI[] | null> => {
+  const likePipeline: PipelineStage[] = [
+    {
+      $lookup: {
+        from: "likes",
+        let: { songId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$song", "$$songId"] },
+                  { $eq: ["$likedBy", new Types.ObjectId(userId)] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "likedDocs",
+      },
+    },
+    {
+      $addFields: { isLiked: { $gt: [{ $size: "$likedDocs" }, 0] } },
+    },
+    {
+      $project: {
+        likedDocs: 0,
+      },
+    },
+  ];
 
   const randomSongArray = await Song.aggregate([
-    // { $match: matchStage },
     { $sample: { size: count } },
+    ...(userId ? likePipeline : []),
   ]);
 
   if (!randomSongArray.length) {
