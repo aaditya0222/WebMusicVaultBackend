@@ -11,8 +11,7 @@ const artist = z
   .regex(
     /^[a-zA-Z0-9._ ]+$/,
     "artist can only contain letters, numbers, dots, underscores or spaces",
-  )
-  .transform((u) => u.toLowerCase());
+  );
 
 const title = z
   .string()
