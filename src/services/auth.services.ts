@@ -287,7 +287,9 @@ const refreshAccessTokenService = async (
     throw new ApiError(HttpStatus.Unauthorized, "Invalid token");
   }
   if (user.refreshToken !== refreshToken) {
-    throw new ApiError(HttpStatus.Unauthorized, "Token has been revoked");
+    throw new ApiError(HttpStatus.Unauthorized, "Token has been revoked", {
+      code: ErrorCode.TOKEN_REVOKED,
+    });
   }
   const { accessToken, refreshToken: newRefreshToken } =
     await user.generateAuthTokens();
