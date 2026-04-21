@@ -3,7 +3,7 @@ import asyncHandler from "express-async-handler";
 import { Request, Response } from "express";
 import ApiError from "../utils/ApiError";
 import ApiResponse from "../utils/ApiResponse";
-import { Types } from "mongoose";
+import { PipelineStage, Types } from "mongoose";
 import { HttpStatus } from "../utils/HttpStatus";
 import Song from "../models/song.model";
 import { createPlaylistSchemaType } from "../schemas/playlist.schema";
@@ -34,9 +34,64 @@ const createPlaylist = asyncHandler(
   },
 );
 const getPlaylists = asyncHandler(async (req, res) => {
-  const userId = new Types.ObjectId(req.user.id);
+  const userId = new Types.ObjectId(req.user?.id);
   const ownerId = new Types.ObjectId(env.OWNER_MONGOOSE_ID);
-
+  const userLikePipeline: PipelineStage = {
+    $unionWith: {
+      coll: "likes",
+      pipeline: [
+        { $match: { likedBy: userId } },
+        { $group: { _id: "$likedBy", songs: { $count: {} } } },
+        {
+          $addFields: {
+            name: "Favourite Songs",
+            description: "This playlist contains your favourite songs",
+            status: "private",
+            isDefault: true,
+            owner: userId,
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "owner",
+            foreignField: "_id",
+            as: "owner",
+            pipeline: [{ $project: { username: 1 } }],
+          },
+        },
+        { $unwind: { path: "$owner", preserveNullAndEmptyArrays: true } },
+      ],
+    },
+  };
+  const ownerLIkePipeline: PipelineStage = {
+    $unionWith: {
+      coll: "likes",
+      pipeline: [
+        { $match: { likedBy: ownerId } },
+        { $group: { _id: "$likedBy", songs: { $count: {} } } },
+        {
+          $addFields: {
+            name: "Owner's Favourite Songs",
+            description: "This playlist contains owner's favourite songs",
+            status: "public",
+            isDefault: true,
+            owner: ownerId,
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "owner",
+            foreignField: "_id",
+            as: "owner",
+            pipeline: [{ $project: { username: 1 } }],
+          },
+        },
+        { $unwind: { path: "$owner", preserveNullAndEmptyArrays: true } },
+      ],
+    },
+  };
   const playlists = await Playlist.aggregate([
     {
       $match: { owner: userId },
@@ -57,64 +112,8 @@ const getPlaylists = asyncHandler(async (req, res) => {
     {
       $unwind: { path: "$owner", preserveNullAndEmptyArrays: true },
     },
-
-    {
-      $unionWith: {
-        coll: "likes",
-        pipeline: [
-          { $match: { likedBy: userId } },
-          { $group: { _id: "$likedBy", songs: { $count: {} } } },
-          {
-            $addFields: {
-              name: "Favourite Songs",
-              description: "This playlist contains your favourite songs",
-              status: "private",
-              isDefault: true,
-              owner: userId,
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              localField: "owner",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [{ $project: { username: 1 } }],
-            },
-          },
-          { $unwind: { path: "$owner", preserveNullAndEmptyArrays: true } },
-        ],
-      },
-    },
-
-    {
-      $unionWith: {
-        coll: "likes",
-        pipeline: [
-          { $match: { likedBy: ownerId } },
-          { $group: { _id: "$likedBy", songs: { $count: {} } } },
-          {
-            $addFields: {
-              name: "Owner's Favourite Songs",
-              description: "This playlist contains owner's favourite songs",
-              status: "public",
-              isDefault: true,
-              owner: ownerId,
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              localField: "owner",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [{ $project: { username: 1 } }],
-            },
-          },
-          { $unwind: { path: "$owner", preserveNullAndEmptyArrays: true } },
-        ],
-      },
-    },
+    ...(userId ? [userLikePipeline] : []),
+    ownerLIkePipeline,
     {
       $group: {
         _id: null,

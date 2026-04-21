@@ -12,6 +12,6 @@ router.post(
   toggleSongLike,
 );
 
-router.get("/:userId", authMiddleware, getLikedSongs);
+router.get("/:userId", getLikedSongs);
 
 export default router;
