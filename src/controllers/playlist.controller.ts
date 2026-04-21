@@ -277,7 +277,7 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
               duration: 1,
               artist: 1,
               fileUrl: 1,
-              playbackUrl: 1,
+              coverImageUrl: 1,
               owner: 1,
               createdAt: 1,
               updatedAt: 1,

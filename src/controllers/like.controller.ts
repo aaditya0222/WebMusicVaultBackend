@@ -73,11 +73,11 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
         likedBy: targetUserId,
         song: { $exists: true },
         ...(cursor
-          ? { song: { $gt: new Types.ObjectId(cursor as string) } }
+          ? { createdAt: { $lt: new Date(cursor as string) } } // Sort by like date
           : {}),
       },
     },
-    { $sort: { song: 1 } },
+    { $sort: { createdAt: -1 } }, // Newest likes first
     { $limit: parsedLimit + 1 },
     {
       $lookup: {
@@ -129,7 +129,7 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
               duration: 1,
               artist: 1,
               fileUrl: 1,
-              playbackUrl: 1,
+              coverImageUrl: 1,
               owner: 1,
               createdAt: 1,
               updatedAt: 1,
@@ -141,6 +141,11 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
       },
     },
     { $unwind: "$song" },
+    {
+      $addFields: {
+        "song.likedAt": "$createdAt",
+      },
+    },
     { $replaceRoot: { newRoot: "$song" } },
   ]);
   if (songs.length > parsedLimit) {
@@ -150,7 +155,8 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
   if (!hasMoreSongs || songs.length === 0) {
     nextCursor = undefined;
   } else {
-    nextCursor = songs[songs.length - 1]._id;
+    // Return the createdAt of the last like as the cursor
+    nextCursor = songs[songs.length - 1].likedAt.toISOString();
   }
   const isOwnerFavourite = targetUserId.equals(ownerId);
   const data = {
