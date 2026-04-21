@@ -44,7 +44,7 @@ router.get("/random/:count", authMiddlewareNotStrict, getRandomSong);
 //Get all songs of a particular artist
 router.get("/artist/:artist", getAllSongOfArtist);
 //Get song by id
-router.get("/:id", validate(idParamSchema), getSongById);
+router.get("/:id", authMiddlewareNotStrict, validate(idParamSchema), getSongById);
 //Delete song by id
 router.delete("/:id", authMiddleware, validate(idParamSchema), deleteSongById);
 //Update song by id

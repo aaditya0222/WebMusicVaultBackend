@@ -10,6 +10,7 @@ import {
   deleteSongService,
   updateSongFieldsService,
   getRandomSongService,
+  getSongByIdService,
 } from "../services/song.services";
 import {
   getSongsSchema,
@@ -81,7 +82,8 @@ const getSongsOrSearchSongs = asyncHandler(
 const getSongById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const id = req.params.id;
-    const song = await Song.findById(id);
+    const userId = req.user?._id;
+    const song = await getSongByIdService(id, userId);
     if (!song) {
       throw new ApiError(HttpStatus.NotFound, "Song not found");
     }

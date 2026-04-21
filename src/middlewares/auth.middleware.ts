@@ -36,7 +36,11 @@ export const authMiddleware = async (
     req.user = user;
     next();
   } catch (error) {
-    return next(error);
+    if (strict) {
+      return next(error);
+    }
+    // For non-strict routes, ignore token errors and proceed as guest
+    next();
   }
 };
 

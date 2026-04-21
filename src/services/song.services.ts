@@ -208,6 +208,39 @@ const createCursorQuery = ({
     return {};
   }
 };
+
+const getLikePipeline = (userId: Types.ObjectId): PipelineStage[] => {
+  return [
+    {
+      $lookup: {
+        from: "likes",
+        let: { songId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$song", "$$songId"] },
+                  { $eq: ["$likedBy", userId] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "likedDocs",
+      },
+    },
+    {
+      $addFields: { isLiked: { $gt: [{ $size: "$likedDocs" }, 0] } },
+    },
+    {
+      $project: {
+        likedDocs: 0,
+      },
+    },
+  ];
+};
+
 const getSongsOrSearchSongsService = async ({
   sortBy,
   sortOrder,
@@ -246,6 +279,7 @@ const getSongsOrSearchSongsService = async ({
       },
     ];
   };
+
   const ownerPipeline: PipelineStage[] = [
     {
       $lookup: {
@@ -260,39 +294,13 @@ const getSongsOrSearchSongsService = async ({
       $addFields: { owner: { $first: "$owner" } },
     },
   ];
-  const likePipeline: PipelineStage[] = [
-    {
-      $lookup: {
-        from: "likes",
-        let: { songId: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ["$song", "$$songId"] },
-                  { $eq: ["$likedBy", new Types.ObjectId(userId)] },
-                ],
-              },
-            },
-          },
-        ],
-        as: "likedDocs",
-      },
-    },
-    {
-      $addFields: { isLiked: { $gt: [{ $size: "$likedDocs" }, 0] } },
-    },
-    {
-      $project: {
-        likedDocs: 0,
-      },
-    },
-  ];
+
+  const likePipeline = userId ? getLikePipeline(userId) : [];
+
   if (!isSearch) {
     songs = await Song.aggregate([
       ...createPipeline(cursorQuery),
-      ...(userId ? likePipeline : []),
+      ...likePipeline,
       ...ownerPipeline,
     ]);
   } else {
@@ -309,25 +317,14 @@ const getSongsOrSearchSongsService = async ({
         cursorQuery,
       ],
     };
-    // ...(tags && { tags: { $in: tags } }),
-    // ...(genre && { genre }),
-    // };
-    // const dbSearchQuery: FilterQuery<SongI> = {
-    //   $text: {
-    //     $search: query as string,
-    //   },
-    //   ...cursorQuery,
-    // };
-    // songs = await Song.find(dbSearchQuery)
-    //   .sort(sort)
-    //   .limit(limit + 1)
-    //   .lean();
+
     songs = await Song.aggregate([
       ...createPipeline(dbSearchQuery),
-      ...(userId ? likePipeline : []),
+      ...likePipeline,
       ...ownerPipeline,
     ]);
   }
+
   if (songs.length > limit) {
     hasMoreSongs = true;
     songs.pop();
@@ -347,12 +344,6 @@ const getSongsOrSearchSongsService = async ({
       value: cursorValue,
       _id: lastSong._id.toString(),
     };
-
-    // OLD CODE - The problem: passes Date object directly, gets serialized as string, then comparison fails
-    // nextCursor = {
-    //   value: lastSong[sortBy],
-    //   _id: lastSong._id.toString(),
-    // };
   }
 
   return { songs, nextCursor, hasMoreSongs };
@@ -360,41 +351,29 @@ const getSongsOrSearchSongsService = async ({
 
 const getRandomSongService = async (
   count: number,
-  userId: Types.ObjectId,
+  userId?: Types.ObjectId,
 ): Promise<SongI[] | null> => {
-  const likePipeline: PipelineStage[] = [
+  const likePipeline = userId ? getLikePipeline(userId) : [];
+
+  const ownerPipeline: PipelineStage[] = [
     {
       $lookup: {
-        from: "likes",
-        let: { songId: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ["$song", "$$songId"] },
-                  { $eq: ["$likedBy", new Types.ObjectId(userId)] },
-                ],
-              },
-            },
-          },
-        ],
-        as: "likedDocs",
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [{ $project: { username: 1 } }],
       },
     },
     {
-      $addFields: { isLiked: { $gt: [{ $size: "$likedDocs" }, 0] } },
-    },
-    {
-      $project: {
-        likedDocs: 0,
-      },
+      $addFields: { owner: { $first: "$owner" } },
     },
   ];
 
   const randomSongArray = await Song.aggregate([
     { $sample: { size: count } },
-    ...(userId ? likePipeline : []),
+    ...likePipeline,
+    ...ownerPipeline,
   ]);
 
   if (!randomSongArray.length) {
@@ -402,6 +381,38 @@ const getRandomSongService = async (
   }
 
   return randomSongArray;
+};
+
+const getSongByIdService = async (
+  songId: string,
+  userId?: Types.ObjectId,
+): Promise<SongI | null> => {
+  const likePipeline = userId ? getLikePipeline(userId) : [];
+
+  const ownerPipeline: PipelineStage[] = [
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [{ $project: { username: 1 } }],
+      },
+    },
+    {
+      $addFields: { owner: { $first: "$owner" } },
+    },
+  ];
+
+  const songArray = await Song.aggregate([
+    {
+      $match: { _id: new Types.ObjectId(songId) },
+    },
+    ...likePipeline,
+    ...ownerPipeline,
+  ]);
+
+  return songArray.length > 0 ? songArray[0] : null;
 };
 
 //*Here after, the song update services will come. Think about flow then start to code furthur. Although the udpateSongFields schema is done, try reviewing it as per your logic
@@ -422,17 +433,7 @@ const updateSongFieldsService = async ({
       $set: {
         ...(title && { title }),
         ...(artist && { artist }),
-        // ...(genre && { genre }),
       },
-      // ...(tags
-      //   ? {
-      //       $addToSet: {
-      //         tags: { $each: tags },
-      //       },
-      //     }
-      //   : {
-      //       tags: [],
-      //     }),
     },
     {
       new: true,
@@ -453,5 +454,6 @@ export {
   deleteSongService,
   getRandomSongService,
   updateSongFieldsService,
+  getSongByIdService,
   uploadLimiter,
 };

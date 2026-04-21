@@ -50,14 +50,17 @@ const toggleSongLike = asyncHandler(async (req: Request, res: Response) => {
 const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.params;
   const { limit, cursor } = req.query;
-  const currentUserId = new Types.ObjectId(req.user?.id);
+  const currentUserId = req.user?.id ? new Types.ObjectId(req.user.id) : null;
   const ownerId = new Types.ObjectId(env.OWNER_MONGOOSE_ID);
   const targetUserId = new Types.ObjectId(userId);
   const parsedLimit = Number(limit) || 10;
   let hasMoreSongs = false;
   let nextCursor: string | undefined;
   // Only allow fetching own likes or owner's likes (which are public)
-  if (!targetUserId.equals(currentUserId) && !targetUserId.equals(ownerId)) {
+  if (
+    (!currentUserId || !targetUserId.equals(currentUserId)) &&
+    !targetUserId.equals(ownerId)
+  ) {
     throw new ApiError(
       HttpStatus.Unauthorized,
       "Not authorized to view this user's liked songs",
