@@ -138,16 +138,21 @@ const getPlaylists = asyncHandler(async (req, res) => {
     { $project: { _id: 0 } },
   ]);
 
-  const result = playlists[0] || { defaultPlaylists: [], personalPlaylists: [] };
+  const result = playlists[0] || {
+    defaultPlaylists: [],
+    personalPlaylists: [],
+  };
 
   // Remove duplicate owner playlist if the current user is the owner
   if (userId && userId.equals(ownerId) && result.defaultPlaylists.length > 0) {
     result.defaultPlaylists.pop();
   }
 
-  res.status(HttpStatus.OK).json(
-    new ApiResponse(HttpStatus.OK, "Playlists fetched successfully", result),
-  );
+  res
+    .status(HttpStatus.OK)
+    .json(
+      new ApiResponse(HttpStatus.OK, "Playlists fetched successfully", result),
+    );
 });
 
 const addSongs = asyncHandler(async (req, res) => {

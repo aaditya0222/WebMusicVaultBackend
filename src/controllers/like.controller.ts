@@ -72,9 +72,7 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
       $match: {
         likedBy: targetUserId,
         song: { $exists: true },
-        ...(cursor
-          ? { createdAt: { $lt: new Date(cursor as string) } } 
-          : {}),
+        ...(cursor ? { createdAt: { $lt: new Date(cursor as string) } } : {}),
       },
     },
     { $sort: { createdAt: -1 } },
@@ -104,14 +102,17 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
           {
             $lookup: {
               from: "likes",
-              let: { songId: "$_id" },
+              let: { songId: "$_id", currentUserId: currentUserId },
+              //the mongodb will treat currentUserId as undefined if we directly use it there cuz there we are using moongodb operators and nested
+              // pipelines specially so we have to let a variable for it.
+
               pipeline: [
                 {
                   $match: {
                     $expr: {
                       $and: [
                         { $eq: ["$song", "$$songId"] },
-                        { $eq: ["$likedBy", currentUserId] },
+                        { $eq: ["$likedBy", "$$currentUserId"] },
                       ],
                     },
                   },
