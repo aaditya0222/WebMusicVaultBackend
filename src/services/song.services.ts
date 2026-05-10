@@ -54,6 +54,10 @@ const uploadLimiter = rateLimit({
   message: { status: 429, message: "Too many uploads, please try again later" },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Use authenticated user ID instead of IP to properly identify users
+    return (req.user as any)?._id?.toString() || req.ip || "anonymous";
+  },
 });
 
 const uploadSongService = async (
