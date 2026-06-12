@@ -52,3 +52,60 @@ for checking purposes if a document exists in db, do Model.exist not Model.findO
 
 actually the backend get rand song should have a count option to specify how much random song u need so that too much unnecessary fetches we can stop  i mean we can fetch 10 random songs once an djust show user one by one i mean don't sh ow them 
 the song unless it's not played or its c hance has not come basically in queue
+
+
+
+/**
+ * ISSUE: Silent Auth Failure on Non-Strict Routes
+ * 
+ * SCENARIO:
+ * 1. User is logged in with valid access token
+ * 2. Navigates away, token expires in background (1 min expiry)
+ * 3. Clicks button to go to playlist/songs (non-strict route)
+ * 4. Request is sent WITHOUT auth header (expired token not sent)
+ * 5. Non-strict route silently accepts it (doesn't check auth)
+ * 6. currentUserId becomes null/undefined
+ * 7. Like check compares against null → isLiked: false for ALL songs
+ * 8. User sees their liked songs as "not liked" 🤦
+ * 
+ * PROBLEM:
+ * - Strict routes return 401 → axios interceptor catches → refreshes token
+ * - Non-strict routes return 200 → No error, no refresh triggered
+ * - User is silently logged out without knowing
+ * 
+ * CURRENT WORKAROUND:
+ * - Increased access token expiry time (temporary solution for exams)
+ * 
+ * PROPER SOLUTION (TODO - After exams):
+ * Option 2: Don't include isLiked check for unauthenticated requests
+ * 
+ * Implementation:
+ * - Check if req.user exists at start of getLikedSongs
+ * - If NO auth: Return songs WITHOUT the isLiked field
+ * - Client will know user is not authenticated
+ * - Frontend can detect missing isLiked → trigger manual refresh/relogin
+ * 
+ * Code change:
+ * const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
+ *   const { userId } = req.params;
+ *   const currentUserId = req.user?._id;
+ *   
+ *   // If no auth, skip isLiked logic entirely
+ *   const includeIsLiked = !!currentUserId;
+ *   
+ *   // In aggregation:
+ *   if (includeIsLiked) {
+ *     // ... do the $lookup for likes
+ *   } else {
+ *     // ... skip like lookup, return songs without isLiked
+ *   }
+ * });
+ * 
+ * Benefits:
+ * - Clear signal to frontend that user lost auth
+ * - Frontend can refresh token or show login prompt
+ * - No silent failures with fake data
+ */
+
+ rate limit not working, do check on it, upload songs rate limit sp ecially, you can upload more than 10 songs also but the limit is of 10 songs in 1 hour
+ 

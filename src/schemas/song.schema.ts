@@ -9,8 +9,8 @@ const artist = z
   .min(1, "artist must be at least of 1 characters")
   .max(30, "artist must be less than or equal to 30 characters")
   .regex(
-    /^[a-zA-Z0-9._ ]+$/,
-    "artist can only contain letters, numbers, dots, underscores or spaces",
+    /^[a-zA-Z0-9._,&]+$/,
+    "artist can only contain letters, numbers, dots, underscores, comma, ampersand or spaces",
   );
 
 const title = z
@@ -141,7 +141,7 @@ export {
   updateSongSchema,
   updateSongRequest,
   parsedSongsQuery,
-  countParamSchema
+  countParamSchema,
   // getRandomSongSchema,
   // getRandomSongRequest,
 };
