@@ -46,17 +46,20 @@ interface getSongsOrSearchSongsServiceI {
   userId?: Types.ObjectId;
 }
 
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 const uploadLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 uploads per hour
+  windowMs: 60 * 60 * 1000,
+  max: 10,
   message: { status: 429, message: "Too many uploads, please try again later" },
   standardHeaders: true,
   legacyHeaders: false,
+
   keyGenerator: (req) => {
-    // Use authenticated user ID instead of IP to properly identify users
-    return (req.user as any)?._id?.toString() || req.ip || "anonymous";
+    const userId = (req.user as any)?._id?.toString();
+    if (userId) return userId;
+
+    return ipKeyGenerator(req.ip ?? "");
   },
 });
 
