@@ -116,7 +116,7 @@ const songSchema = new Schema<SongI>(
   {
     title: { type: String, required: true, trim: true },
     duration: { type: Number, required: true, min: 1 },
-    artist: { type: String, default: "unknown", trim: true },
+    artist: { type: String, default: "Unknown Artist", trim: true },
     publicId: { type: String, required: true },
     fileUrl: { type: String, required: true },
     coverImageUrl: String,
