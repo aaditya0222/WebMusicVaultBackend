@@ -10,4 +10,7 @@ export enum ErrorCode {
   // OTP
   OTP_NOT_FOUND = "OTP_NOT_FOUND",
   OTP_EXPIRED = "OTP_EXPIRED",
+
+  // System
+  MAINTENANCE_MODE = "MAINTENANCE_MODE",
 }
