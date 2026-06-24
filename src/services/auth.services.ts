@@ -32,8 +32,8 @@ const verifyOtp = async (otp: string, hashedOtp: string): Promise<boolean> => {
   return await bcrypt.compare(otp, hashedOtp);
 };
 
-export const getUserDetailsToSend = (user: UserI) => {
-  const { authProviders, createdAt, updatedAt, ...requiredData } =
+export const getUserDetailsToSend = (user: UserI): LoginAndRegisterData => {
+  const { authProviders, createdAt, updatedAt, __v, ...requiredData } =
     user.toJSON();
   return requiredData as LoginAndRegisterData;
 };
