@@ -7,6 +7,7 @@ import invalidRouteMiddleware from "./middlewares/invalidRoute.middleware";
 import indexRouter from "./routes/index.route";
 import { env } from "./config/env";
 import rateLimit from "express-rate-limit";
+import maintainanceMiddleware from "./middlewares/maintainance.middleware";
 
 const app = express();
 
@@ -40,7 +41,6 @@ const strictLimiter = rateLimit({
 // 'trust proxy' is essential when deployed behind a reverse proxy (Vercel, Render, Nginx, etc.)
 // It allows the rate limiter to see the real user's IP instead of the proxy's IP.
 app.set("trust proxy", 1);
-
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -53,7 +53,7 @@ app.use(
     credentials: true,
   }),
 );
-
+app.use(maintainanceMiddleware);
 app.use(helmet());
 app.use(limiter);
 app.use("/api/v1/auth", strictLimiter);
