@@ -2,13 +2,13 @@ import { Request, Response, NextFunction } from "express";
 import { env } from "../config/env";
 import { HttpStatus } from "../utils/HttpStatus";
 import { ErrorCode } from "../utils/ErrorCode";
-const maintainanceMiddleware = (
+const maintenanceMiddleware = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  const maintainance = env.MAINTAINANCE_MODE;
-  if (maintainance) {
+  const maintenance = env.MAINTENANCE_MODE;
+  if (maintenance) {
     return res.status(HttpStatus.Forbidden).json({
       status: HttpStatus.Forbidden,
       message: "Server is under maintenance. Please try again later.",
@@ -18,4 +18,4 @@ const maintainanceMiddleware = (
   next();
 };
 
-export default maintainanceMiddleware;
+export default maintenanceMiddleware;

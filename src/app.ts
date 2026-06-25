@@ -7,7 +7,7 @@ import invalidRouteMiddleware from "./middlewares/invalidRoute.middleware";
 import indexRouter from "./routes/index.route";
 import { env } from "./config/env";
 import rateLimit from "express-rate-limit";
-import maintainanceMiddleware from "./middlewares/maintainance.middleware";
+import maintenanceMiddleware from "./middlewares/maintenance.middleware";
 
 const app = express();
 
@@ -53,7 +53,7 @@ app.use(
     credentials: true,
   }),
 );
-app.use(maintainanceMiddleware);
+app.use(maintenanceMiddleware);
 app.use(helmet());
 app.use(limiter);
 app.use("/api/v1/auth", strictLimiter);

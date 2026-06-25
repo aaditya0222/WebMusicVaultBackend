@@ -51,7 +51,7 @@ const envSchema = z.object({
       24,
       "Owner id is required for returning owner's picked songs playlist",
     ),
-  MAINTAINANCE_MODE: z
+  MAINTENANCE_MODE: z
     .enum(["true", "false"])
     .transform((val) => val === "true"),
 });
