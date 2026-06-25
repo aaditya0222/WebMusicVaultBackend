@@ -53,7 +53,7 @@ const getUsernameSuggestions = ({
   if (identifier.length < 3) identifier = identifier.padEnd(3, "0");
 
   const baseUsername = identifier;
-  let usernameSuggestions: string[] = [];
+  const usernameSuggestions: string[] = [];
   while (n !== 0) {
     identifier = `${baseUsername}_${nanoid()}`;
     usernameSuggestions.push(identifier);

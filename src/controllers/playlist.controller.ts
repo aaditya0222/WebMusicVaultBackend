@@ -300,7 +300,7 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
   }
 
   const playlist = songsData[0];
-  let songs = playlist.songs;
+  const songs = playlist.songs;
 
   let hasMoreSongs = false;
   let nextCursor: string | undefined = undefined;

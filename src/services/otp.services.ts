@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs";
 import { SendOtpService } from "../schemas/user.schema";
 import { ErrorCode } from "../utils/ErrorCode";
 const generateOtp = (): string => {
-  let otp = crypto.randomInt(100000, 1000000).toString();
+  const otp = crypto.randomInt(100000, 1000000).toString();
   return otp;
 };
 

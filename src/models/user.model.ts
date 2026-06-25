@@ -20,7 +20,7 @@ export interface UserI extends Document<Types.ObjectId> {
   otpExpiry?: Date;
   authProviders: string[];
   role: "user" | "admin";
-  refreshToken: String | undefined;
+  refreshToken: string | undefined;
   createdAt: Date;
   updatedAt: Date;
   isPasswordCorrect(password: string): Promise<boolean>;

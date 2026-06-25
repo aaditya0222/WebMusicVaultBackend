@@ -1,10 +1,8 @@
-import { html5Email } from "zod/v4/core/regexes.cjs";
 import { env } from "../config/env";
 // import { Resend } from "resend";
 // import type { CreateEmailResponse } from "resend";
 // const resend = new Resend(env.RESEND_EMAIL_API_KEY);
 import nodemailer from "nodemailer";
-import { success } from "zod";
 interface EmailOptions {
   to: string;
   subject: string;
@@ -48,7 +46,7 @@ export const sendEmail = async ({ to, subject, html }: EmailOptions) => {
     });
   } catch (error) {
     console.error("Email sending failed:", error);
-    throw new Error("Email sending failed");
+    throw new Error("Email sending failed", { cause: error });
   }
 };
 

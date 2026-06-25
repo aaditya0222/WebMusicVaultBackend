@@ -28,7 +28,7 @@ const errorMiddleware = (
     status = HttpStatus.BadRequest;
     code = ErrorCode.VALIDATION_ERROR;
     message = "Validation Error";
-    responseErrors = Object.entries(err.errors).map(([field, error]: any) => ({
+    responseErrors = Object.entries(err.errors).map(([field, error]) => ({
       field,
       message: error.message,
     }));

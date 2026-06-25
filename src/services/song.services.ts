@@ -106,7 +106,7 @@ const uploadSongService = async (
 
     return { song };
   } catch (error) {
-    env.NODE_ENV === "development" && console.error(error);
+    if (env.NODE_ENV === "development") console.error(error);
 
     // Cleanup whatever got uploaded before the failure
     if (songUploadResult?.public_id) {
