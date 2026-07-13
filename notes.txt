@@ -108,4 +108,5 @@ the song unless it's not played or its c hance has not come basically in queue
  */
 
  rate limit not working, do check on it, upload songs rate limit sp ecially, you can upload more than 10 songs also but the limit is of 10 songs in 1 hour
- 
+ latest changes:14/07/2026:
+ the update song is done, but need to handle cases where we get similar title so we have to send suitable resopnse in frontend, and handle that response in a good way in frontend.

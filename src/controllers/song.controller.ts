@@ -19,8 +19,7 @@ import {
   parsedSongsQuery,
   songFilesSchema,
   countParamSchema,
-  // getRandomSongSchema,
-  // getRandomSongRequest,
+  singleCoverImageSchema,
 } from "../schemas/song.schema";
 
 const uploadSong = asyncHandler(
@@ -43,13 +42,6 @@ const uploadSong = asyncHandler(
 );
 const getSongsOrSearchSongs = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    // const isSearch = Object.keys(req.query).some((key) =>
-    //   ["query", "tags", "genre", "artist", "title"].includes(key),
-    // );
-    // const isSearch = Object.keys(req.query).some((key) =>
-    //   ["query", "artist", "title"].includes(key),
-    // );
-
     const isSearch = !!req.query.query;
     const userId = req.user?._id;
     const parsedQuery: parsedSongsQuery = isSearch
@@ -65,8 +57,6 @@ const getSongsOrSearchSongs = asyncHandler(
         sortOrder,
         cursor,
         query,
-        // genre,
-        // tags,
         userId,
       });
     res.status(HttpStatus.OK).json(
@@ -102,7 +92,6 @@ const deleteSongById = asyncHandler(
 );
 //this must be furthur extend to give random songs as per the given genre, tag , author or artist
 const getRandomSong = asyncHandler(async (req: Request, res: Response) => {
-  // const query: getRandomSongRequest = getRandomSongSchema.parse(req.query);
   const {
     params: { count },
   } = countParamSchema.parse(req);
@@ -125,17 +114,16 @@ const getRandomSong = asyncHandler(async (req: Request, res: Response) => {
     );
 });
 
-const updateAllFieldsOfSong = asyncHandler(
+const updateRequiredFieldsOfSong = asyncHandler(
   async (req: Request, res: Response) => {
     const songId = req.params.id;
-    if (!songId) {
-      throw new ApiError(HttpStatus.BadRequest, "Invalid song id");
-    }
     const data: updateSongRequest = req.body;
+    const coverImage = singleCoverImageSchema.parse(req.file);
     const updatedSong = await updateSongFieldsService({
       ...data,
       songId,
       userId: req.user._id,
+      coverImage,
     });
     res
       .status(HttpStatus.OK)
@@ -160,7 +148,7 @@ export {
   getSongById,
   deleteSongById,
   getRandomSong,
-  updateAllFieldsOfSong,
+  updateRequiredFieldsOfSong,
   getSongsOrSearchSongs,
   getAllSongOfArtist,
   increamentPlayCount,

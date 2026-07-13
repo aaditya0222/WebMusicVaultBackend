@@ -40,3 +40,5 @@ Desktop.ini
 .cache-loader/
 .eslintcache
 
+migration-log.json
+

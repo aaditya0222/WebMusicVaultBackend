@@ -7,7 +7,7 @@ import {
   getSongById,
   deleteSongById,
   getRandomSong,
-  updateAllFieldsOfSong,
+  updateRequiredFieldsOfSong,
   getSongsOrSearchSongs,
   getAllSongOfArtist,
   increamentPlayCount,
@@ -44,15 +44,21 @@ router.get("/random/:count", authMiddlewareNotStrict, getRandomSong);
 //Get all songs of a particular artist
 router.get("/artist/:artist", getAllSongOfArtist);
 //Get song by id
-router.get("/:id", authMiddlewareNotStrict, validate(idParamSchema), getSongById);
+router.get(
+  "/:id",
+  authMiddlewareNotStrict,
+  validate(idParamSchema),
+  getSongById,
+);
 //Delete song by id
 router.delete("/:id", authMiddleware, validate(idParamSchema), deleteSongById);
 //Update song by id
 router.patch(
   "/:id",
   authMiddleware,
+  upload.single("coverImage"),
   validate(updateSongSchema),
-  updateAllFieldsOfSong,
+  updateRequiredFieldsOfSong,
 );
 router.patch("/:id/incrplaycount", increamentPlayCount);
 

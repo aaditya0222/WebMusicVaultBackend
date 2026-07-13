@@ -1,4 +1,5 @@
 import { file, z } from "zod";
+import { validate } from "../middlewares/validate.middleware";
 // import { GENRES, TAGS } from "../models/song.model";
 
 export const mongoId = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ID");
@@ -26,8 +27,6 @@ const uploadSongSchema = z.object({
   body: z.object({
     title,
     artist: artist.optional(),
-    // genre,
-    // tags,
   }),
 });
 
@@ -47,8 +46,6 @@ const basePaginationSchema = z.object({
 
 const searchFieldsSchema = z.object({
   query: z.string().trim().min(1).max(50),
-  // genre,
-  // tags,
 });
 
 const countParamSchema = z.object({
@@ -88,37 +85,20 @@ const songFilesSchema = z.object({
     .optional(),
 });
 
-// const getRandomSongSchema = z.preprocess(
-//   (data: any) => {
-//     if (!data || typeof data !== "object") {
-//       return {};
-//     }
-//     const d = data as Record<string, unknown>;
-//     const parsedData = {
-//       ...d,
-//       tags: d.tags
-//         ? Array.isArray(data.tags)
-//           ? data.tags
-//           : [data.tags]
-//         : undefined,
-//     };
-//     return parsedData;
-//   },
-// z.object({
-//   genre,
-//   tags,
-// }),
-// );
-
 const updateSongSchema = z.object({
   params: z.object({ id: mongoId }),
-  body: z.object({
-    title,
-    artist: artist.optional(),
-    // genre,
-    // tags,
-  }),
+  body: z
+    .object({
+      title,
+      artist,
+    })
+    .partial()
+    .refine((data) => Object.keys(data).length > 0, {
+      message: "At least one updatable field should be provided",
+    }),
 });
+
+const singleCoverImageSchema = fileSchema.optional();
 
 type uploadSongRequest = z.infer<typeof uploadSongSchema>["body"];
 type updateSongParams = z.infer<typeof updateSongSchema>["params"];
@@ -142,6 +122,7 @@ export {
   updateSongRequest,
   parsedSongsQuery,
   countParamSchema,
+  singleCoverImageSchema,
   // getRandomSongSchema,
   // getRandomSongRequest,
 };

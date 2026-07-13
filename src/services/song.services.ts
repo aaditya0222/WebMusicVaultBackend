@@ -47,6 +47,8 @@ interface getSongsOrSearchSongsServiceI {
 }
 
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import User from "../models/user.model";
+import multer from "multer";
 
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -254,8 +256,6 @@ const getSongsOrSearchSongsService = async ({
   cursor,
   limit,
   query,
-  // genre,
-  // tags,
   userId,
 }: getSongsOrSearchSongsServiceI): Promise<{
   songs: SongI[];
@@ -422,37 +422,58 @@ const getSongByIdService = async (
   return songArray.length > 0 ? songArray[0] : null;
 };
 
-//*Here after, the song update services will come. Think about flow then start to code furthur. Although the udpateSongFields schema is done, try reviewing it as per your logic
 const updateSongFieldsService = async ({
   songId,
   userId,
   title,
   artist,
-  // tags,
-  // genre,
+  coverImage,
 }: updateSongRequest & {
   songId: string;
   userId: Types.ObjectId;
+  coverImage?: Express.Multer.File;
 }): Promise<SongI> => {
-  const song = await Song.findOneAndUpdate(
-    { _id: songId, owner: userId },
-    {
-      $set: {
-        ...(title && { title }),
-        ...(artist && { artist }),
-      },
-    },
-    {
-      new: true,
-    },
-  );
+  const user = await User.findById(userId);
+  const song = await Song.findById(songId);
+
   if (!song) {
+    throw new ApiError(HttpStatus.NotFound, "Song with given id not found");
+  }
+
+  if (!user || (user.role !== "admin" && song.owner.equals(user._id))) {
     throw new ApiError(
       HttpStatus.Forbidden,
-      "You do not have permission to update this song or it does not exist",
+      "You do not have permission to update this song",
     );
   }
 
+  let coverUploadResult: UploadApiResponse | undefined;
+
+  if (coverImage) {
+    coverUploadResult = await uploadFile({
+      buffer: coverImage.buffer,
+      folder: "coverImages",
+      resource_type: "image",
+    });
+
+    if (!coverUploadResult || "error" in coverUploadResult) {
+      throw new Error("There was a problem while uploading cover image");
+    }
+  }
+  if (title) song.title = title + ".mp3";
+  if (artist) song.artist = artist;
+  if (coverUploadResult) {
+    song.coverImagePublicId = coverUploadResult.public_id;
+    song.coverImageUrl = coverUploadResult?.secure_url;
+  }
+  const oldPublicId = song.coverImagePublicId;
+  await song.save();
+  if (coverUploadResult && oldPublicId) {
+    await deleteFile({
+      publicId: oldPublicId,
+      resource_type: "image",
+    });
+  }
   return song;
 };
 export {
