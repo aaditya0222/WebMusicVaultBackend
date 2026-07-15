@@ -1,7 +1,4 @@
-import { file, z } from "zod";
-import { validate } from "../middlewares/validate.middleware";
-// import { GENRES, TAGS } from "../models/song.model";
-
+import { z } from "zod";
 export const mongoId = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ID");
 
 const artist = z
@@ -10,7 +7,7 @@ const artist = z
   .min(1, "artist must be at least of 1 characters")
   .max(30, "artist must be less than or equal to 30 characters")
   .regex(
-    /^[a-zA-Z0-9._,&]+$/,
+    /^[a-zA-Z0-9._,& ]+$/,
     "artist can only contain letters, numbers, dots, underscores, comma, ampersand or spaces",
   );
 
@@ -20,8 +17,6 @@ const title = z
   .min(1, "Title must be at least of 1 characters")
   .max(125, "Length of title must be less than or equal to 125 characters")
   .optional();
-// const genre = z.enum(GENRES).optional();
-// const tags = z.array(z.enum(TAGS)).optional();
 
 const uploadSongSchema = z.object({
   body: z.object({

@@ -51,7 +51,6 @@ passport.use(
               isEmailVerified: true,
             });
           }
-          console.log("step 1");
         }
         return cb(null, user);
       } catch (err) {
