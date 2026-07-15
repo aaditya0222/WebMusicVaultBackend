@@ -135,17 +135,27 @@ const uploadSongService = async (
   }
 };
 const deleteSongService = async (
-  id: idType,
+  songId: idType,
   userId: Types.ObjectId,
+  role: "admin" | "user",
 ): Promise<void> => {
-  const song = await Song.findOneAndDelete({ _id: id, owner: userId });
+  const song = await Song.findById(songId);
+
   if (!song) {
+    throw new ApiError(HttpStatus.NotFound, "Song not found");
+  }
+
+  if (role !== "admin" && !song.owner?.equals(userId)) {
     throw new ApiError(
       HttpStatus.Forbidden,
-      "You do not have permission to delete this song or it does not exist",
+      "You do not have permission to delete this song",
     );
   }
-  await deleteFile({ publicId: song.publicId, resource_type: "video" });
+
+  await Promise.all([
+    Song.findByIdAndDelete(songId),
+    deleteFile({ publicId: song.publicId, resource_type: "video" }),
+  ]);
 };
 
 //*for non unique fields need to use the _id as secondary cusror for exactly getting the document

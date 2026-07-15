@@ -83,8 +83,8 @@ const getSongById = asyncHandler(
 );
 const deleteSongById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const id = req.params.id;
-    await deleteSongService(id, req.user._id);
+    const songId = req.params.id;
+    await deleteSongService(songId, req.user._id, req.user?.role);
     res
       .status(HttpStatus.OK)
       .json(new ApiResponse(HttpStatus.OK, `song deleted successfully`, null));
