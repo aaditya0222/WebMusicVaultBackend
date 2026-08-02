@@ -11,6 +11,8 @@ import {
   getSongsOrSearchSongs,
   getAllSongOfArtist,
   increamentPlayCount,
+  getPinnedSongs,
+  setPinSong,
 } from "../controllers/song.controller";
 import {
   idParamSchema,
@@ -60,9 +62,9 @@ router.patch(
   validate(updateSongSchema),
   updateRequiredFieldsOfSong,
 );
+router.get("/pinned", authMiddlewareNotStrict, getPinnedSongs);
+router.put("/:id/pin", authMiddleware, setPinSong(true));
+router.delete("/:id/pin", authMiddleware, setPinSong(false));
+
 router.patch("/:id/incrplaycount", increamentPlayCount);
-
-// Note: Use a PATCH /songs/:id route to allow partial updates to a song’s details like title, artist, genre, and tags. Only the owner of the song can perform these edits; all other users should be restricted. Validate inputs and merge updates without overwriting the entire document.
-
-//route for updating song detail below goes there
 export default router;

@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import { Request, Response } from "express";
+import { Types } from "mongoose";
 import { HttpStatus } from "../utils/HttpStatus";
 import ApiResponse from "../utils/ApiResponse";
 import ApiError from "../utils/ApiError";
@@ -10,6 +11,8 @@ import {
   updateSongFieldsService,
   getRandomSongService,
   getSongByIdService,
+  pinSongService,
+  getPinnedSongsService,
 } from "../services/song.services";
 import {
   getSongsSchema,
@@ -20,6 +23,7 @@ import {
   songFilesSchema,
   countParamSchema,
   singleCoverImageSchema,
+  mongoId,
 } from "../schemas/song.schema";
 
 const uploadSong = asyncHandler(
@@ -137,6 +141,45 @@ const updateRequiredFieldsOfSong = asyncHandler(
   },
 );
 
+const getPinnedSongs = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user?._id;
+    const pinnedSongs = getPinnedSongsService(userId);
+    res
+      .status(HttpStatus.OK)
+      .send(
+        new ApiResponse(
+          HttpStatus.OK,
+          "Pinned songs sent successfully",
+          pinnedSongs,
+        ),
+      );
+  },
+);
+
+const setPinSong = (pin: boolean) => {
+  return asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const songId = mongoId.parse(req.params.id);
+
+    const message = await pinSongService({
+      songId: new Types.ObjectId(songId),
+      userId: req.user._id,
+      pin,
+    });
+
+    res
+      .status(HttpStatus.OK)
+      .send(
+        new ApiResponse(
+          HttpStatus.OK,
+          message
+            ? message
+            : `Successfully ${pin ? "pinned" : "unpinned"} song`,
+          null,
+        ),
+      );
+  });
+};
 const increamentPlayCount = asyncHandler(
   async (req: Request, res: Response) => {},
 );
@@ -151,5 +194,7 @@ export {
   updateRequiredFieldsOfSong,
   getSongsOrSearchSongs,
   getAllSongOfArtist,
+  setPinSong,
   increamentPlayCount,
+  getPinnedSongs,
 };

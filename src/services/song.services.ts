@@ -15,16 +15,6 @@ import { MongoServerError } from "mongodb";
 
 import { FilterQuery } from "mongoose";
 
-type skippedT = { title: string; reason: string }[];
-interface uploadSongResponse {
-  uploaded: SongI[];
-  skipped: skippedT;
-  summary: {
-    totalFiles: number;
-    uploadCount: number;
-    skippedCount: number;
-  };
-}
 type nonUniqueSortBy = "playCount" | "duration" | "createdAt";
 type uniqueSortBy = "title";
 type sortByT = nonUniqueSortBy | uniqueSortBy;
@@ -41,14 +31,18 @@ interface getSongsOrSearchSongsServiceI {
   sortOrder: "asc" | "desc";
   cursor: cursorT;
   query?: string;
-  // genre?: string;
-  // tags?: string[];
   userId?: Types.ObjectId;
+}
+interface pinSongI {
+  songId: Types.ObjectId;
+  userId: Types.ObjectId;
+  pin: boolean;
 }
 
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import Like from "../models/like.model";
+import Playlist from "../models/playlist.model";
 import User from "../models/user.model";
-import multer from "multer";
 
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -154,6 +148,12 @@ const deleteSongService = async (
 
   await Promise.all([
     Song.findByIdAndDelete(songId),
+    Like.deleteMany({ song: songId }), //delete song's instances from Like model to ensure consistency and transparency between different models of the app.
+    Playlist.updateMany({ song: songId }, { $pull: { songs: songId } }),
+    User.updateMany(
+      { pinnedSongs: songId },
+      { $pull: { pinnedSongs: songId } },
+    ),
     deleteFile({ publicId: song.publicId, resource_type: "video" }),
   ]);
 };
@@ -259,6 +259,22 @@ const getLikePipeline = (userId: Types.ObjectId): PipelineStage[] => {
     },
   ];
 };
+const getOwnerPipeline = (): PipelineStage[] => {
+  return [
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [{ $project: { username: 1 } }],
+      },
+    },
+    {
+      $addFields: { owner: { $first: "$owner" } },
+    },
+  ];
+};
 
 const getSongsOrSearchSongsService = async ({
   sortBy,
@@ -297,26 +313,20 @@ const getSongsOrSearchSongsService = async ({
     ];
   };
 
-  const ownerPipeline: PipelineStage[] = [
-    {
-      $lookup: {
-        from: "users",
-        localField: "owner",
-        foreignField: "_id",
-        as: "owner",
-        pipeline: [{ $project: { username: 1 } }],
-      },
-    },
-    {
-      $addFields: { owner: { $first: "$owner" } },
-    },
-  ];
-
+  const ownerPipeline = getOwnerPipeline();
   const likePipeline = userId ? getLikePipeline(userId) : [];
 
+  const target = userId
+    ? await User.findById(userId).select("pinnedSongs")
+    : await User.findOne({ role: "admin" }).select("pinnedSongs");
+  const pinnedSongIds = target?.pinnedSongs ?? [];
+  const filterPipeline = createPipeline({
+    ...cursorQuery,
+    _id: { $nin: pinnedSongIds },
+  });
   if (!isSearch) {
     songs = await Song.aggregate([
-      ...createPipeline(cursorQuery),
+      ...filterPipeline,
       ...likePipeline,
       ...ownerPipeline,
     ]);
@@ -372,20 +382,7 @@ const getRandomSongService = async (
 ): Promise<SongI[] | null> => {
   const likePipeline = userId ? getLikePipeline(userId) : [];
 
-  const ownerPipeline: PipelineStage[] = [
-    {
-      $lookup: {
-        from: "users",
-        localField: "owner",
-        foreignField: "_id",
-        as: "owner",
-        pipeline: [{ $project: { username: 1 } }],
-      },
-    },
-    {
-      $addFields: { owner: { $first: "$owner" } },
-    },
-  ];
+  const ownerPipeline = getOwnerPipeline();
 
   const randomSongArray = await Song.aggregate([
     { $sample: { size: count } },
@@ -450,7 +447,7 @@ const updateSongFieldsService = async ({
     throw new ApiError(HttpStatus.NotFound, "Song with given id not found");
   }
 
-  if (!user || (user.role !== "admin" && song.owner.equals(user._id))) {
+  if (!user || (user.role !== "admin" && !song.owner.equals(user._id))) {
     throw new ApiError(
       HttpStatus.Forbidden,
       "You do not have permission to update this song",
@@ -486,6 +483,89 @@ const updateSongFieldsService = async ({
   }
   return song;
 };
+const pinSongService = async ({
+  songId,
+  userId,
+  pin,
+}: pinSongI): Promise<string | void> => {
+  if (!Types.ObjectId.isValid(songId.toString())) {
+    throw new ApiError(HttpStatus.NotFound, "Song not found");
+  }
+
+  const user = await User.findById(userId).select("pinnedSongs");
+
+  if (!user) {
+    throw new ApiError(HttpStatus.NotFound, "User not found");
+  }
+
+  const alreadyPinned = user.pinnedSongs.some(
+    (pinnedSongId) => pinnedSongId.toString() === songId.toString(),
+  );
+
+  if (pin) {
+    if (alreadyPinned) return "This song is already pinned";
+
+    if (user.pinnedSongs.length >= 3) {
+      throw new ApiError(
+        HttpStatus.BadRequest,
+        "You can only pin up to 3 songs. Unpin one to add another.",
+      );
+    }
+
+    const songExists = await Song.exists({ _id: songId });
+
+    if (!songExists) {
+      throw new ApiError(HttpStatus.NotFound, "Song not found");
+    }
+
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: {
+        pinnedSongs: songId,
+      },
+    });
+
+    return;
+  }
+
+  if (!alreadyPinned) return;
+
+  await User.findByIdAndUpdate(userId, {
+    $pull: {
+      pinnedSongs: songId,
+    },
+  });
+};
+const getPinnedSongsService = async (
+  userId?: Types.ObjectId,
+): Promise<SongI[]> => {
+  const target = userId
+    ? await User.findById(userId).select("pinnedSongs")
+    : await User.findOne({ role: "admin" }).select("pinnedSongs");
+  const pinnedSongIds = target?.pinnedSongs ?? [];
+  if (!pinnedSongIds.length) {
+    return [];
+  }
+
+  const likePipeline = userId ? getLikePipeline(userId) : [];
+  const ownerPipeline = getOwnerPipeline();
+
+  const pinnedSongs = await Song.aggregate([
+    { $match: { _id: { $in: pinnedSongIds } } },
+    ...likePipeline,
+    ...ownerPipeline,
+  ]);
+
+  const orderedPinnedSongs = pinnedSongIds
+    .map((id) =>
+      pinnedSongs.find((song) => song._id.toString() === id.toString()),
+    )
+    .filter((song): song is SongI => song !== undefined);
+  // `song is SongI` is a TypeScript type predicate.
+  // It tells TypeScript that if this callback returns `true`,
+  // `song` is guaranteed to be a `SongI` (not `undefined`).
+
+  return orderedPinnedSongs;
+};
 export {
   uploadSongService,
   getSongsOrSearchSongsService,
@@ -494,4 +574,6 @@ export {
   updateSongFieldsService,
   getSongByIdService,
   uploadLimiter,
+  pinSongService,
+  getPinnedSongsService,
 };

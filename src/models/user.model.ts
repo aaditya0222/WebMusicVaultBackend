@@ -1,12 +1,11 @@
-import { Schema, model, Document, Types } from "mongoose";
+import { Schema, model, Document, Types, ObjectId } from "mongoose";
 import bcrypt from "bcryptjs";
 import {
   generateAccessToken,
   generateRefreshToken,
 } from "../services/auth.services";
 import avatars from "../config/avatars";
-import Playlist from "./playlist.model";
-import ApiError from "../utils/ApiError";
+import Song from "./song.model";
 
 export interface UserI extends Document<Types.ObjectId> {
   username: string;
@@ -21,6 +20,7 @@ export interface UserI extends Document<Types.ObjectId> {
   authProviders: string[];
   role: "user" | "admin";
   refreshToken: string | undefined;
+  pinnedSongs: ObjectId[];
   createdAt: Date;
   updatedAt: Date;
   isPasswordCorrect(password: string): Promise<boolean>;
@@ -56,8 +56,8 @@ const userSchema = new Schema<UserI>(
       required: false, //because we are going to use both oauth login method and normal username/email + password login method
       // select: false,
       //no regex, minlen, and maxlen for simplicity while testing
-      // minlength: [8, "Password must be at least 8 characters"],
-      // maxlength: [128, "Password must be at most 128 characters"],
+      minlength: [8, "Password must be at least 8 characters"],
+      maxlength: [128, "Password must be at most 128 characters"],
     },
     avatar: {
       type: String,
@@ -90,6 +90,11 @@ const userSchema = new Schema<UserI>(
     refreshToken: {
       type: String,
       default: undefined,
+    },
+    pinnedSongs: {
+      type: [Schema.Types.ObjectId],
+      ref: Song,
+      maxlength: 3,
     },
   },
   {

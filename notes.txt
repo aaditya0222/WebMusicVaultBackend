@@ -110,3 +110,14 @@ the song unless it's not played or its c hance has not come basically in queue
  rate limit not working, do check on it, upload songs rate limit sp ecially, you can upload more than 10 songs also but the limit is of 10 songs in 1 hour
  latest changes:14/07/2026:
  the update song is done, but need to handle cases where we get similar title so we have to send suitable resopnse in frontend, and handle that response in a good way in frontend.
+
+latest edit progress:
+i made a route for get pinned songs, made controller for it, made services for it but it now not matches the idea
+so change the services of get pinned songs to send songs pinned of the user if user is logged in by checking 
+if there is user id or not as i used authmiddlware notstrict if usser send his/hers pinned songs else
+send the owners/my pinned songs for guest users.
+
+in frontend
+first apply the get pinned songs feature then do something for merging so that duplicate don't happen later when we scroll the list
+then after that , write function of toggle pin feature and after that like how u implemented and separated pin 
+song feature and component , also separate and implement playlist create, add to playlist feature and all.11
