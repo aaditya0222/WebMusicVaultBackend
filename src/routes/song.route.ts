@@ -45,6 +45,10 @@ router.get("/", authMiddlewareNotStrict, getSongsOrSearchSongs);
 router.get("/random/:count", authMiddlewareNotStrict, getRandomSong);
 //Get all songs of a particular artist
 router.get("/artist/:artist", getAllSongOfArtist);
+//Get pinned songs for the current user
+router.get("/pinned", authMiddlewareNotStrict, getPinnedSongs);
+router.put("/:id/pin", authMiddleware, setPinSong(true));
+router.delete("/:id/pin", authMiddleware, setPinSong(false));
 //Get song by id
 router.get(
   "/:id",
@@ -62,9 +66,6 @@ router.patch(
   validate(updateSongSchema),
   updateRequiredFieldsOfSong,
 );
-router.get("/pinned", authMiddlewareNotStrict, getPinnedSongs);
-router.put("/:id/pin", authMiddleware, setPinSong(true));
-router.delete("/:id/pin", authMiddleware, setPinSong(false));
 
 router.patch("/:id/incrplaycount", increamentPlayCount);
 export default router;
