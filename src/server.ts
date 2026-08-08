@@ -2,12 +2,13 @@ import app from "./app";
 import connectDb from "./config/config";
 import { env } from "./config/env";
 import "./config/passport";
-// import { extractMetaData } from "./scripts/extractMetadataAndUploadToDb";
+import { extractMetaData } from "./scripts/extractMetadataAndUploadToDb";
 const startServer = async (): Promise<void> => {
   try {
     await connectDb();
     app.listen(env.PORT);
     console.log("Successfully Started Server on port ", env.PORT);
+    // extractMetaData();
   } catch (error) {
     if (error instanceof Error) {
       console.error(

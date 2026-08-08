@@ -435,6 +435,7 @@ const updateSongFieldsService = async ({
   title,
   artist,
   coverImage,
+  removeCoverImage,
 }: updateSongRequest & {
   songId: string;
   userId: Types.ObjectId;
@@ -467,15 +468,21 @@ const updateSongFieldsService = async ({
       throw new Error("There was a problem while uploading cover image");
     }
   }
+  const oldPublicId = song.coverImagePublicId;
+
   if (title) song.title = title + ".mp3";
   if (artist) song.artist = artist;
   if (coverUploadResult) {
     song.coverImagePublicId = coverUploadResult.public_id;
-    song.coverImageUrl = coverUploadResult?.secure_url;
+    song.coverImageUrl = coverUploadResult.secure_url;
+  } else if (removeCoverImage) {
+    song.coverImagePublicId = undefined;
+    song.coverImageUrl = undefined;
   }
-  const oldPublicId = song.coverImagePublicId;
+
   await song.save();
-  if (coverUploadResult && oldPublicId) {
+
+  if ((coverUploadResult || removeCoverImage) && oldPublicId) {
     await deleteFile({
       publicId: oldPublicId,
       resource_type: "image",

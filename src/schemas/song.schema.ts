@@ -80,17 +80,19 @@ const songFilesSchema = z.object({
     .optional(),
 });
 
+const removeCoverImage = z
+  .union([z.boolean(), z.string().transform((val) => val === "true")])
+  .optional();
+
 const updateSongSchema = z.object({
   params: z.object({ id: mongoId }),
   body: z
     .object({
       title,
       artist,
+      removeCoverImage,
     })
-    .partial()
-    .refine((data) => Object.keys(data).length > 0, {
-      message: "At least one updatable field should be provided",
-    }),
+    .partial(),
 });
 
 const singleCoverImageSchema = fileSchema.optional();

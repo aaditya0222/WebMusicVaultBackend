@@ -123,6 +123,14 @@ const updateRequiredFieldsOfSong = asyncHandler(
     const songId = req.params.id;
     const data: updateSongRequest = req.body;
     const coverImage = singleCoverImageSchema.parse(req.file);
+
+    if (Object.keys(data).length === 0 && !coverImage) {
+      throw new ApiError(
+        HttpStatus.BadRequest,
+        "At least one updatable field should be provided",
+      );
+    }
+
     const updatedSong = await updateSongFieldsService({
       ...data,
       songId,
