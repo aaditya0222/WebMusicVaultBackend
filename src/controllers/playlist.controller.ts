@@ -12,6 +12,14 @@ import { env } from "../config/env";
 const createPlaylist = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { name, status, description } = req.body as createPlaylistSchemaType;
+    // Enforce per-user playlist limit
+    const playlistCount = await Playlist.countDocuments({ owner: req.user.id });
+    if (playlistCount >= 10) {
+      throw new ApiError(
+        HttpStatus.BadRequest,
+        "You can create up to 10 playlists. Delete one to add another.",
+      );
+    }
     const existingPlaylist = await Playlist.findOne({
       name,
       owner: req.user.id,
@@ -195,6 +203,15 @@ const addSongs = asyncHandler(async (req, res) => {
         title: song.title,
         id: song._id,
         message: `'${song.title}' is already present in the playlist`,
+      });
+      continue;
+    }
+    // Enforce per-playlist song limit
+    if (playlist.songs.length >= 50) {
+      skippedSongs.push({
+        title: song.title,
+        id: song._id,
+        message: "A playlist can hold up to 50 songs",
       });
       continue;
     }
