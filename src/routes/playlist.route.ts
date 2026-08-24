@@ -9,10 +9,12 @@ import {
   createPlaylist,
   getPlaylistSongs,
   getPlaylists,
+  removeSongs,
 } from "../controllers/playlist.controller";
 import {
   createPlaylistSchema,
   modifyPlaylistSongSchema,
+  removePlaylistSongSchema,
   getPlaylistSongsSchema,
 } from "../schemas/playlist.schema";
 
@@ -34,6 +36,13 @@ router.patch(
   authMiddleware,
   validate(modifyPlaylistSongSchema),
   addSongs,
+);
+
+router.patch(
+  "/:playlistId/remove",
+  authMiddleware,
+  validate(removePlaylistSongSchema),
+  removeSongs,
 );
 
 export default router;

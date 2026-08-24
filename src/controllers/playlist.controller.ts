@@ -28,9 +28,15 @@ const createPlaylist = asyncHandler(
       description,
       owner: req.user.id,
     });
+    const playlistData = playlist.toObject();
     res
       .status(HttpStatus.Created)
-      .json(new ApiResponse(HttpStatus.OK, "Successfully logged in", playlist));
+      .json(
+        new ApiResponse(HttpStatus.OK, "Playlist created successfully", {
+          ...playlistData,
+          songs: playlistData.songs.length,
+        }),
+      );
   },
 );
 const getPlaylists = asyncHandler(async (req, res) => {
@@ -202,6 +208,40 @@ const addSongs = asyncHandler(async (req, res) => {
     }),
   );
 });
+const removeSongs = asyncHandler(async (req, res) => {
+  const { songIds } = req.body;
+  const { playlistId } = req.params;
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new ApiError(HttpStatus.NotFound, "Invalid Playlist");
+  }
+  if (!playlist.owner.equals(req.user._id)) {
+    throw new ApiError(
+      HttpStatus.Unauthorized,
+      "This playlist doesn't belongs to current user",
+    );
+  }
+
+  let removed = 0;
+  for (const songId of songIds) {
+    const index = playlist.songs.findIndex((song) => song.equals(songId));
+    if (index === -1) continue;
+    playlist.songs.splice(index, 1);
+    removed++;
+  }
+
+  if (removed > 0) {
+    await playlist.save();
+  }
+
+  res.status(HttpStatus.OK).json(
+    new ApiResponse(
+      HttpStatus.OK,
+      "Successfully removed song from the playlist",
+      { playlist, removed },
+    ),
+  );
+});
 const getPlaylistSongs = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   const { limit, cursor } = req.query;
@@ -323,4 +363,10 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
     }),
   );
 });
-export { createPlaylist, addSongs, getPlaylistSongs, getPlaylists };
+export {
+  createPlaylist,
+  addSongs,
+  removeSongs,
+  getPlaylistSongs,
+  getPlaylists,
+};

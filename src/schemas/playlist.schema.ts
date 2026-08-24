@@ -37,6 +37,14 @@ const modifyPlaylistSongSchema = z.object({
     songIds: z.array(objectId),
   }),
 });
+const removePlaylistSongSchema = z.object({
+  params: z.object({
+    playlistId: objectId,
+  }),
+  body: z.object({
+    songIds: z.array(objectId),
+  }),
+});
 const getPlaylistSongsSchema = z.object({
   params: z.object({
     playlistId: objectId,
@@ -51,6 +59,7 @@ type createPlaylistSchemaType = z.infer<typeof createPlaylistSchema>["body"];
 export {
   createPlaylistSchema,
   modifyPlaylistSongSchema,
+  removePlaylistSongSchema,
   getPlaylistSongsSchema,
   objectId,
   createPlaylistSchemaType,
