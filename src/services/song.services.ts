@@ -17,7 +17,7 @@ import { FilterQuery } from "mongoose";
 
 type nonUniqueSortBy = "playCount" | "duration" | "createdAt";
 type uniqueSortBy = "title";
-type sortByT = nonUniqueSortBy | uniqueSortBy;
+type sortByT = nonUniqueSortBy | uniqueSortBy | "relevance";
 type cursorT =
   | {
       value: string | number | Date;
@@ -228,6 +228,87 @@ const createCursorQuery = ({
   }
 };
 
+// Escape regex metacharacters from user input to prevent ReDoS / broken match expressions
+const escapeRegex = (input: string): string =>
+  input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Build the $addFields pipeline stage that computes the relevance searchScore.
+const buildRelevanceScoreStage = (
+  phrase: string,
+  words: string[],
+): PipelineStage => {
+  const phraseLower = phrase.toLowerCase();
+  const escPhrase = escapeRegex(phraseLower);
+
+  // helper building { $cond: [ { $regexMatch ... }, 1, 0 ] }
+  const matchField = (fieldExpr: unknown, regex: string) => ({
+    $regexMatch: {
+      input: { $toLower: { $toString: fieldExpr } },
+      regex: new RegExp(regex, "i"),
+    },
+  });
+
+  const exactTitle = matchField("$title", `^${escPhrase}\\.mp3$`);
+  const startsWithTitle = matchField("$title", `^${escPhrase}`);
+  const containsTitle = matchField("$title", escPhrase);
+  const startsWithArtist = matchField("$artist", `^${escPhrase}`);
+  const containsArtist = matchField("$artist", escPhrase);
+
+  const titleLen = { $strLenCP: "$title" };
+  const phraseLen = phrase.length;
+  const proximityBonus = {
+    $max: [
+      0,
+      {
+        $subtract: [
+          2000,
+          { $multiply: [{ $subtract: [titleLen, phraseLen] }, 25] },
+        ],
+      },
+    ],
+  };
+
+  const wordHitScore = (field: string, weight: number) =>
+    words.length > 0
+      ? {
+          $multiply: [
+            {
+              $add: words.map((word) => ({
+                $cond: [
+                  {
+                    $regexMatch: {
+                      input: { $toLower: { $toString: `$${field}` } },
+                      regex: new RegExp(escapeRegex(word.toLowerCase()), "i"),
+                    },
+                  },
+                  1,
+                  0,
+                ],
+              })),
+            },
+            weight,
+          ],
+        }
+      : 0;
+
+  return {
+    $addFields: {
+      searchScore: {
+        $add: [
+          { $cond: [exactTitle, 10000, 0] },
+          { $cond: [startsWithTitle, 8000, 0] },
+          { $cond: [containsTitle, 6000, 0] },
+          { $cond: [startsWithArtist, 5000, 0] },
+          { $cond: [containsArtist, 3000, 0] },
+          proximityBonus,
+          wordHitScore("title", 100),
+          wordHitScore("artist", 50),
+        ],
+      },
+    },
+  } as PipelineStage;
+};
+
 const getLikePipeline = (userId: Types.ObjectId): PipelineStage[] => {
   return [
     {
@@ -330,6 +411,70 @@ const getSongsOrSearchSongsService = async ({
       ...likePipeline,
       ...ownerPipeline,
     ]);
+  } else if (sortBy === "relevance") {
+    // ── RELEVANCE SEARCH ──────────────────────────────────────────
+    // 1) Candidate filter first: full phrase OR any deduped word in title/artist.
+    //    Regex metacharacters escaped, words deduped + capped → no ReDoS.
+    const words = Array.from(
+      new Set(
+        query!
+          .split(/\s+/)
+          .filter((w) => w.length > 0)
+          .slice(0, 8),
+      ),
+    );
+    const phrase = query!.trim();
+
+    const wordOrs = words.map((word) => ({
+      $or: [
+        { title: { $regex: escapeRegex(word), $options: "i" } },
+        { artist: { $regex: escapeRegex(word), $options: "i" } },
+      ],
+    }));
+
+    const candidateMatch = {
+      _id: { $nin: pinnedSongIds },
+      $or: [
+        // full phrase as its own search string
+        { title: { $regex: escapeRegex(phrase), $options: "i" } },
+        { artist: { $regex: escapeRegex(phrase), $options: "i" } },
+        // word-level ORs
+        ...wordOrs,
+      ],
+    };
+
+    // 2) Score each candidate (only runs on matching docs)
+    const scoreStage = buildRelevanceScoreStage(phrase, words);
+
+    // 3) Relevance cursor: score < last OR (score == last AND playCount < lastPC)
+    //    OR (score == last AND playCount == lastPC AND _id < lastId)
+    const cursorMatch = cursor
+      ? {
+          $or: [
+            { searchScore: { $lt: Number(cursor.value) } },
+            {
+              searchScore: Number(cursor.value),
+              $or: [
+                { playCount: { $lt: Number((cursor as any).playCount) } },
+                {
+                  playCount: Number((cursor as any).playCount),
+                  _id: { $lt: new Types.ObjectId(cursor._id) },
+                },
+              ],
+            },
+          ],
+        }
+      : {};
+
+    songs = await Song.aggregate([
+      { $match: candidateMatch },
+      scoreStage,
+      { $match: cursorMatch },
+      { $sort: { searchScore: -1, playCount: -1, _id: -1 } },
+      { $limit: limit + 1 },
+      ...likePipeline,
+      ...ownerPipeline,
+    ]);
   } else {
     const dbSearchQuery: FilterQuery<SongI> = {
       $and: [
@@ -356,21 +501,39 @@ const getSongsOrSearchSongsService = async ({
     hasMoreSongs = true;
     songs.pop();
   }
+
   if (!hasMoreSongs || songs.length === 0) {
     nextCursor = undefined;
   } else {
-    const lastSong = songs[songs.length - 1];
+    const lastSong: any = songs[songs.length - 1];
 
-    // NEW CODE - Converts Date to ISO string for proper serialization
-    const cursorValue =
-      sortBy === "createdAt" && lastSong[sortBy] instanceof Date
-        ? (lastSong[sortBy] as Date).toISOString()
-        : lastSong[sortBy];
+    if (sortBy === "relevance") {
+      // Relevance cursor must carry score + playCount so the next page
+      // resumes at the exact same ordering position.
+      nextCursor = {
+        value: lastSong.searchScore ?? 0,
+        playCount: lastSong.playCount ?? 0,
+        _id: lastSong._id.toString(),
+      } as any;
+    } else {
+      // NEW CODE - Converts Date to ISO string for proper serialization
+      const cursorValue =
+        sortBy === "createdAt" && lastSong[sortBy] instanceof Date
+          ? (lastSong[sortBy] as Date).toISOString()
+          : lastSong[sortBy];
 
-    nextCursor = {
-      value: cursorValue,
-      _id: lastSong._id.toString(),
-    };
+      nextCursor = {
+        value: cursorValue,
+        _id: lastSong._id.toString(),
+      };
+    }
+  }
+
+  // Strip internal searchScore from results before returning (relevance sort)
+  if (sortBy === "relevance") {
+    songs.forEach((song: any) => {
+      delete song.searchScore;
+    });
   }
 
   return { songs, nextCursor, hasMoreSongs };

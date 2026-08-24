@@ -29,7 +29,7 @@ const basePaginationSchema = z.object({
   limit: z.coerce.number().min(1).max(25).default(20),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
   sortBy: z
-    .enum(["createdAt", "title", "duration", "playCount"])
+    .enum(["relevance", "createdAt", "title", "duration", "playCount"])
     .default("createdAt"),
   cursor: z
     .object({
