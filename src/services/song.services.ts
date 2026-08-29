@@ -1,5 +1,6 @@
 import ApiError from "../utils/ApiError";
 import { HttpStatus } from "../utils/HttpStatus";
+import { ErrorCode } from "../utils/ErrorCode";
 import { UploadApiResponse } from "cloudinary";
 import { deleteFile, uploadFile } from "../config/cloudinary";
 import Song from "../models/song.model";
@@ -22,6 +23,7 @@ type cursorT =
   | {
       value: string | number | Date;
       _id?: string;
+      playCount?: number;
     }
   | undefined;
 
@@ -47,7 +49,11 @@ import User from "../models/user.model";
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
-  message: { status: 429, message: "Too many uploads, please try again later" },
+  message: {
+    status: HttpStatus.TooManyRequests,
+    message: "Too many uploads, please try again later",
+    code: ErrorCode.RATE_LIMITED,
+  },
   standardHeaders: true,
   legacyHeaders: false,
 
@@ -228,85 +234,113 @@ const createCursorQuery = ({
   }
 };
 
-// Escape regex metacharacters from user input to prevent ReDoS / broken match expressions
-const escapeRegex = (input: string): string =>
-  input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-// Build the $addFields pipeline stage that computes the relevance searchScore.
-const buildRelevanceScoreStage = (
-  phrase: string,
-  words: string[],
-): PipelineStage => {
-  const phraseLower = phrase.toLowerCase();
-  const escPhrase = escapeRegex(phraseLower);
-
-  // helper building { $cond: [ { $regexMatch ... }, 1, 0 ] }
-  const matchField = (fieldExpr: unknown, regex: string) => ({
-    $regexMatch: {
-      input: { $toLower: { $toString: fieldExpr } },
-      regex: new RegExp(regex, "i"),
-    },
-  });
-
-  const exactTitle = matchField("$title", `^${escPhrase}\\.mp3$`);
-  const startsWithTitle = matchField("$title", `^${escPhrase}`);
-  const containsTitle = matchField("$title", escPhrase);
-  const startsWithArtist = matchField("$artist", `^${escPhrase}`);
-  const containsArtist = matchField("$artist", escPhrase);
-
-  const titleLen = { $strLenCP: "$title" };
-  const phraseLen = phrase.length;
-  const proximityBonus = {
-    $max: [
-      0,
-      {
-        $subtract: [
-          2000,
-          { $multiply: [{ $subtract: [titleLen, phraseLen] }, 25] },
+// ── Atlas Search ──────────────────────────────────────────────────
+// Uses the Atlas Search index `songs_search_index` (static mapping on
+// artist + title). compound.should + fuzzy matching + artist boost gives
+// relevance-ranked results (e.g. "arifit" still matches "Arijit").
+const buildAtlasSearchPipeline = ({
+  query,
+  limit,
+  sortBy,
+  sortOrder,
+  cursor,
+  cursorQuery,
+  likePipeline,
+  ownerPipeline,
+}: {
+  query: string;
+  limit: number;
+  sortBy: sortByT;
+  sortOrder: "asc" | "desc";
+  cursor: cursorT;
+  cursorQuery: FilterQuery<SongI>;
+  likePipeline: PipelineStage[];
+  ownerPipeline: PipelineStage[];
+}): PipelineStage[] => {
+  // $search MUST be the first stage of the aggregation.
+  const searchStage = {
+    $search: {
+      index: "songs_search_index",
+      compound: {
+        should: [
+          {
+            text: {
+              query,
+              path: "artist",
+              fuzzy: { maxEdits: 2, prefixLength: 1 },
+              score: { boost: { value: 3 } },
+            },
+          },
+          {
+            text: {
+              query,
+              path: "title",
+              fuzzy: { maxEdits: 1 },
+            },
+          },
         ],
       },
-    ],
-  };
+    },
+  } as unknown as PipelineStage;
 
-  const wordHitScore = (field: string, weight: number) =>
-    words.length > 0
+  // Expose the Atlas relevance score on each result.
+  const scoreStage = {
+    $addFields: { searchScore: { $meta: "searchScore" } },
+  } as PipelineStage;
+
+  if (sortBy === "relevance") {
+    // Relevance cursor: score < last OR (score == last AND playCount < lastPC)
+    // OR (score == last AND playCount == lastPC AND _id < lastId)
+    const cursorMatch = cursor
       ? {
-          $multiply: [
+          $or: [
+            { searchScore: { $lt: Number(cursor.value) } },
             {
-              $add: words.map((word) => ({
-                $cond: [
-                  {
-                    $regexMatch: {
-                      input: { $toLower: { $toString: `$${field}` } },
-                      regex: new RegExp(escapeRegex(word.toLowerCase()), "i"),
-                    },
-                  },
-                  1,
-                  0,
-                ],
-              })),
+              searchScore: Number(cursor.value),
+              $or: [
+                { playCount: { $lt: Number((cursor as any).playCount) } },
+                {
+                  playCount: Number((cursor as any).playCount),
+                  _id: { $lt: new Types.ObjectId(cursor._id) },
+                },
+              ],
             },
-            weight,
           ],
         }
-      : 0;
+      : {};
 
-  return {
-    $addFields: {
-      searchScore: {
-        $add: [
-          { $cond: [exactTitle, 10000, 0] },
-          { $cond: [startsWithTitle, 8000, 0] },
-          { $cond: [containsTitle, 6000, 0] },
-          { $cond: [startsWithArtist, 5000, 0] },
-          { $cond: [containsArtist, 3000, 0] },
-          proximityBonus,
-          wordHitScore("title", 100),
-          wordHitScore("artist", 50),
-        ],
-      },
-    },
-  } as PipelineStage;
+    return [
+      searchStage,
+      scoreStage,
+      // Only apply the cursor filter on paginated pages; the first page shows
+      // every Atlas-ranked match (pinned songs are NOT excluded from search).
+      ...(cursor ? [{ $match: cursorMatch }] : []),
+      { $sort: { searchScore: -1, playCount: -1, _id: -1 } },
+      { $limit: limit + 1 },
+      ...likePipeline,
+      ...ownerPipeline,
+    ];
+  }
+
+  // Non-relevance sort: Atlas Search still narrows the candidates, then the
+  // user-selected sortBy/sortOrder is applied on top of those matches.
+  const sort: Record<string, 1 | -1> = {
+    [sortBy]: sortOrder === "asc" ? 1 : -1,
+    _id: sortOrder === "asc" ? 1 : -1,
+  };
+
+  return [
+    searchStage,
+    scoreStage,
+    // Apply the cursor filter only when paginating (cursorQuery is {} otherwise).
+    ...(cursorQuery && Object.keys(cursorQuery).length
+      ? [{ $match: cursorQuery }]
+      : []),
+    { $sort: sort },
+    { $limit: limit + 1 },
+    ...likePipeline,
+    ...ownerPipeline,
+  ];
 };
 
 const getLikePipeline = (userId: Types.ObjectId): PipelineStage[] => {
@@ -411,90 +445,23 @@ const getSongsOrSearchSongsService = async ({
       ...likePipeline,
       ...ownerPipeline,
     ]);
-  } else if (sortBy === "relevance") {
-    // ── RELEVANCE SEARCH ──────────────────────────────────────────
-    // 1) Candidate filter first: full phrase OR any deduped word in title/artist.
-    //    Regex metacharacters escaped, words deduped + capped → no ReDoS.
-    const words = Array.from(
-      new Set(
-        query!
-          .split(/\s+/)
-          .filter((w) => w.length > 0)
-          .slice(0, 8),
-      ),
-    );
-    const phrase = query!.trim();
-
-    const wordOrs = words.map((word) => ({
-      $or: [
-        { title: { $regex: escapeRegex(word), $options: "i" } },
-        { artist: { $regex: escapeRegex(word), $options: "i" } },
-      ],
-    }));
-
-    const candidateMatch = {
-      _id: { $nin: pinnedSongIds },
-      $or: [
-        // full phrase as its own search string
-        { title: { $regex: escapeRegex(phrase), $options: "i" } },
-        { artist: { $regex: escapeRegex(phrase), $options: "i" } },
-        // word-level ORs
-        ...wordOrs,
-      ],
-    };
-
-    // 2) Score each candidate (only runs on matching docs)
-    const scoreStage = buildRelevanceScoreStage(phrase, words);
-
-    // 3) Relevance cursor: score < last OR (score == last AND playCount < lastPC)
-    //    OR (score == last AND playCount == lastPC AND _id < lastId)
-    const cursorMatch = cursor
-      ? {
-          $or: [
-            { searchScore: { $lt: Number(cursor.value) } },
-            {
-              searchScore: Number(cursor.value),
-              $or: [
-                { playCount: { $lt: Number((cursor as any).playCount) } },
-                {
-                  playCount: Number((cursor as any).playCount),
-                  _id: { $lt: new Types.ObjectId(cursor._id) },
-                },
-              ],
-            },
-          ],
-        }
-      : {};
-
-    songs = await Song.aggregate([
-      { $match: candidateMatch },
-      scoreStage,
-      { $match: cursorMatch },
-      { $sort: { searchScore: -1, playCount: -1, _id: -1 } },
-      { $limit: limit + 1 },
-      ...likePipeline,
-      ...ownerPipeline,
-    ]);
   } else {
-    const dbSearchQuery: FilterQuery<SongI> = {
-      $and: [
-        ...query.split(/\s+/).map((word) => {
-          return {
-            $or: [
-              { title: { $regex: word, $options: "i" } },
-              { artist: { $regex: word, $options: "i" } },
-            ],
-          };
-        }),
+    // ── ATLAS SEARCH ──────────────────────────────────────────────
+    // $search (index: songs_search_index) with compound.should against
+    // artist + title, fuzzy matching, and artist boosted by 3x. The Atlas
+    // relevance score is exposed as `searchScore` on each result doc.
+    songs = await Song.aggregate(
+      buildAtlasSearchPipeline({
+        query: query!,
+        limit,
+        sortBy,
+        sortOrder,
+        cursor,
         cursorQuery,
-      ],
-    };
-
-    songs = await Song.aggregate([
-      ...createPipeline(dbSearchQuery),
-      ...likePipeline,
-      ...ownerPipeline,
-    ]);
+        likePipeline,
+        ownerPipeline,
+      }),
+    );
   }
 
   if (songs.length > limit) {
@@ -529,12 +496,8 @@ const getSongsOrSearchSongsService = async ({
     }
   }
 
-  // Strip internal searchScore from results before returning (relevance sort)
-  if (sortBy === "relevance") {
-    songs.forEach((song: any) => {
-      delete song.searchScore;
-    });
-  }
+  // searchScore (from $meta: "searchScore") is intentionally kept on each
+  // result doc so consumers can see the Atlas relevance ranking.
 
   return { songs, nextCursor, hasMoreSongs };
 };

@@ -8,6 +8,8 @@ import indexRouter from "./routes/index.route";
 import { env } from "./config/env";
 import rateLimit from "express-rate-limit";
 import maintenanceMiddleware from "./middlewares/maintenance.middleware";
+import { HttpStatus } from "./utils/HttpStatus";
+import { ErrorCode } from "./utils/ErrorCode";
 
 const app = express();
 
@@ -21,10 +23,20 @@ const allowedOrigins =
         "http://localhost:3000",
       ];
 
+// Rate-limit responses use the same JSON shape as ApiError so the frontend can
+// detect them reliably (plain-text responses used to be unparseable / unstyled).
+const rateLimitResponse = (message: string) => ({
+  status: HttpStatus.TooManyRequests,
+  message,
+  code: ErrorCode.RATE_LIMITED,
+});
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1000,
-  message: "Too many requests from this IP, please try again after 15 minutes",
+  message: rateLimitResponse(
+    "Too many requests from this IP, please try again after 15 minutes",
+  ),
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -32,8 +44,22 @@ const limiter = rateLimit({
 const strictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: env.NODE_ENV === "production" ? 20 : 1000,
-  message:
+  message: rateLimitResponse(
     "Too many authentication attempts, please try again after 15 minutes",
+  ),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Dedicated, less aggressive limiter for the song API (list/search/pagination).
+// The strict auth limiter is NOT suitable here — debounced search + infinite
+// scroll easily exceed 20 requests per 15 minutes for a normal user.
+const songLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: env.NODE_ENV === "production" ? 200 : 2000,
+  message: rateLimitResponse(
+    "Too many requests, please slow down and try again in a few minutes",
+  ),
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -57,7 +83,7 @@ app.use(maintenanceMiddleware);
 app.use(helmet());
 app.use(limiter);
 app.use("/api/v1/auth", strictLimiter);
-app.use("/api/v1/song", strictLimiter);
+app.use("/api/v1/song", songLimiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

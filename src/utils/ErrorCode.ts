@@ -13,4 +13,5 @@ export enum ErrorCode {
 
   // System
   MAINTENANCE_MODE = "MAINTENANCE_MODE",
+  RATE_LIMITED = "RATE_LIMITED",
 }

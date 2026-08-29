@@ -35,6 +35,7 @@ const basePaginationSchema = z.object({
     .object({
       value: z.union([z.string(), z.number(), z.date()]),
       _id: mongoId.optional(),
+      playCount: z.number().optional(),
     })
     .optional(),
 });
