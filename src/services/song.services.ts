@@ -2,7 +2,7 @@ import ApiError from "../utils/ApiError";
 import { HttpStatus } from "../utils/HttpStatus";
 import { ErrorCode } from "../utils/ErrorCode";
 import { UploadApiResponse } from "cloudinary";
-import { deleteFile, uploadFile } from "../config/cloudinary";
+import { deleteFile, getSongUrl, getSongsUrl, uploadFile } from "../config/cloudinary";
 import Song from "../models/song.model";
 import type { SongI } from "../models/song.model";
 import { PipelineStage, SortOrder, Types } from "mongoose";
@@ -468,6 +468,7 @@ const getSongsOrSearchSongsService = async ({
     hasMoreSongs = true;
     songs.pop();
   }
+  songs = getSongsUrl(songs);
 
   if (!hasMoreSongs || songs.length === 0) {
     nextCursor = undefined;
@@ -520,7 +521,7 @@ const getRandomSongService = async (
     return null;
   }
 
-  return randomSongArray;
+  return getSongsUrl(randomSongArray);
 };
 
 const getSongByIdService = async (
@@ -552,7 +553,10 @@ const getSongByIdService = async (
     ...ownerPipeline,
   ]);
 
-  return songArray.length > 0 ? songArray[0] : null;
+  if (songArray.length === 0) return null;
+  const song = songArray[0];
+  song.fileUrl = getSongUrl(song.publicId);
+  return song;
 };
 
 const updateSongFieldsService = async ({
@@ -614,6 +618,7 @@ const updateSongFieldsService = async ({
       resource_type: "image",
     });
   }
+  song.fileUrl = getSongUrl(song.publicId);
   return song;
 };
 const pinSongService = async ({
@@ -697,7 +702,7 @@ const getPinnedSongsService = async (
   // It tells TypeScript that if this callback returns `true`,
   // `song` is guaranteed to be a `SongI` (not `undefined`).
 
-  return orderedPinnedSongs;
+  return getSongsUrl(orderedPinnedSongs);
 };
 export {
   uploadSongService,

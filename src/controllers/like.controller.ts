@@ -5,6 +5,7 @@ import Like from "../models/like.model";
 import { HttpStatus } from "../utils/HttpStatus";
 import ApiResponse from "../utils/ApiResponse";
 import ApiError from "../utils/ApiError";
+import { getSongsUrl } from "../config/cloudinary";
 import { Types } from "mongoose";
 import { env } from "../config/env";
 
@@ -168,7 +169,7 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
       : "This playlist contains your favourite songs",
     status: isOwnerFavourite ? "public" : "private",
     isDefault: true,
-    songs,
+    songs: getSongsUrl(songs),
     nextCursor,
     hasMoreSongs,
   };

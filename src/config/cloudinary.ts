@@ -3,6 +3,7 @@ import { UploadApiResponse } from "cloudinary";
 import { env } from "../config/env";
 import ApiError from "../utils/ApiError";
 import { HttpStatus } from "../utils/HttpStatus";
+import { SongI } from "../models/song.model";
 
 cloudinary.config({
   cloud_name: env.CLOUDINARY_CLOUD_NAME,
@@ -70,5 +71,23 @@ const deleteFile = async ({
   });
 };
 
-export { uploadFile, deleteFile };
+const getSongUrl = (
+  publicId: string,
+  { download = false }: { download?: boolean } = {},
+): string => {
+  return cloudinary.utils.private_download_url(publicId, "mp3", {
+    resource_type: "video",
+    type: "authenticated",
+    expires_at: Math.floor(Date.now() / 1000) + 21600, // 6 hour
+    attachment: download,
+  });
+};
+
+const getSongsUrl = (songs: SongI[]): SongI[] => {
+  for (const song of songs) {
+    song.fileUrl = getSongUrl(song.publicId);
+  }
+  return songs;
+};
+export { uploadFile, deleteFile, getSongUrl, getSongsUrl };
 export default cloudinary;

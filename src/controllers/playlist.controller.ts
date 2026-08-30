@@ -8,6 +8,7 @@ import { HttpStatus } from "../utils/HttpStatus";
 import Song from "../models/song.model";
 import { createPlaylistSchemaType } from "../schemas/playlist.schema";
 import { env } from "../config/env";
+import { getSongsUrl } from "../config/cloudinary";
 
 const createPlaylist = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
@@ -374,7 +375,7 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
   res.status(HttpStatus.OK).json(
     new ApiResponse(HttpStatus.OK, "Playlist songs fetched successfully", {
       ...playlist,
-      songs,
+      songs: getSongsUrl(songs),
       nextCursor,
       hasMoreSongs,
     }),

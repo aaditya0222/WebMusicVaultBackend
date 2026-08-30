@@ -56,7 +56,7 @@ const strictLimiter = rateLimit({
 // scroll easily exceed 20 requests per 15 minutes for a normal user.
 const songLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: env.NODE_ENV === "production" ? 200 : 2000,
+  max: env.NODE_ENV === "production" ? 75 : 2000,
   message: rateLimitResponse(
     "Too many requests, please slow down and try again in a few minutes",
   ),
@@ -88,6 +88,14 @@ app.use("/api/v1/song", songLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Signed song URLs expire (~1h) and are minted per request, so NO response
+// may ever be cached — a cached body would carry an already-expired URL.
+// This is an API-only backend (no static assets), so a global no-store is safe.
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
 app.use("/api/v1/", indexRouter);
 
