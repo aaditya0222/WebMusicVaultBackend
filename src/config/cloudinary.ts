@@ -25,7 +25,14 @@ const uploadFile = async ({
 }: uploadParams): Promise<UploadApiResponse> => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { resource_type, folder },
+      {
+        resource_type,
+        folder,
+        // Only songs are private (authenticated delivery, signed URLs).
+        // Covers and avatars stay public ("upload") since they're rendered
+        // via unsigned direct URLs.
+        type: folder === "songs" ? "authenticated" : "upload",
+      },
       (error, result) => {
         if (error) {
           console.error("Upload failed:", error);
@@ -71,15 +78,32 @@ const deleteFile = async ({
   });
 };
 
+// Streaming URL generation.
+//
+// Tradeoff (intentional): we use cloudinary.url() with sign_url:true (direct
+// res.cloudinary.com CDN delivery, instant playback start) instead of
+// private_download_url() (api.cloudinary.com download endpoint + redirect,
+// which caused a 5-10s playback delay).
+//
+// Note: signed CDN URLs do NOT enforce real expiry — they remain valid until
+// the API secret is rotated. Access control comes from the asset being
+// type: "authenticated" (unsigned URLs 401) + the signature itself. This is
+// an accepted tradeoff for playback speed; end-of-life ends when secrets are
+// rotated.
+//
+// `download` (attachment flag) is intentionally ignored here — it only
+// applies to private_download_url() responses, not signed delivery URLs. It
+// is kept as a no-op parameter for call-site compatibility.
 const getSongUrl = (
   publicId: string,
   { download = false }: { download?: boolean } = {},
 ): string => {
-  return cloudinary.utils.private_download_url(publicId, "mp3", {
+  return cloudinary.url(publicId, {
     resource_type: "video",
     type: "authenticated",
-    expires_at: Math.floor(Date.now() / 1000) + 21600, // 6 hour
-    attachment: download,
+    format: "mp3",
+    sign_url: true,
+    secure: true,
   });
 };
 

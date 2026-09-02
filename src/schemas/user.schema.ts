@@ -83,6 +83,14 @@ const verifyEmailSchema = z.object({
 const usernameSchema = z.object({
   username: username,
 });
+
+const updateUserSchema = z.object({
+  body: z.object({
+    displayName: displayName.optional(),
+    username: username.optional(),
+  }),
+});
+
 type SendOtpService = z.infer<typeof sendOtpSchema>["body"] &
   z.infer<typeof sendOtpSchema>["query"];
 type RegisterRequest = z.infer<typeof registerSchema>["body"];
@@ -94,6 +102,7 @@ type SendOtpRequest = {
   query: z.infer<typeof sendOtpSchema>["query"];
 };
 type VerifyEmailRequest = z.infer<typeof verifyEmailSchema>["body"];
+type UpdateUserRequest = z.infer<typeof updateUserSchema>["body"];
 
 export {
   registerSchema,
@@ -102,12 +111,14 @@ export {
   setPasswordSchema,
   verifyEmailSchema,
   sendOtpSchema,
+  updateUserSchema,
   RegisterRequest,
   LoginRequest,
   SuggestUsernameRequest,
   SetPasswordRequest,
   SendOtpRequest,
   VerifyEmailRequest,
+  UpdateUserRequest,
   usernameSchema,
   SendOtpService,
 };
