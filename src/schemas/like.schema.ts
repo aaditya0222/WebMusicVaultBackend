@@ -6,4 +6,14 @@ const likeSongSchema = z.object({
   }),
 });
 
-export { likeSongSchema };
+const getLikedSongsSchema = z.object({
+  params: z.object({
+    userId: objectId,
+  }),
+  query: z.object({
+    limit: z.coerce.number().min(1).max(25).default(10),
+    cursor: z.string().optional(),
+  }),
+});
+
+export { likeSongSchema, getLikedSongsSchema };

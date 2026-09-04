@@ -189,12 +189,7 @@ const setPinSong = (pin: boolean) => {
       );
   });
 };
-const increamentPlayCount = asyncHandler(
-  async (req: Request, res: Response) => {},
-);
-const getAllSongOfArtist = asyncHandler(
-  async (req: Request, res: Response) => {},
-);
+
 export {
   uploadSong,
   getSongById,
@@ -202,8 +197,6 @@ export {
   getRandomSong,
   updateRequiredFieldsOfSong,
   getSongsOrSearchSongs,
-  getAllSongOfArtist,
   setPinSong,
-  increamentPlayCount,
   getPinnedSongs,
 };

@@ -260,6 +260,58 @@ const removeSongs = asyncHandler(async (req, res) => {
     ),
   );
 });
+const updatePlaylist = asyncHandler(async (req, res) => {
+  const { playlistId } = req.params;
+  const { name, description, status } = req.body;
+
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new ApiError(HttpStatus.NotFound, "Invalid Playlist");
+  }
+  if (!playlist.owner.equals(req.user._id)) {
+    throw new ApiError(
+      HttpStatus.Unauthorized,
+      "This playlist doesn't belongs to current user",
+    );
+  }
+  if (playlist.isDefault) {
+    throw new ApiError(
+      HttpStatus.BadRequest,
+      "Default playlists cannot be edited",
+    );
+  }
+
+  if (name && name !== playlist.name) {
+    const duplicate = await Playlist.findOne({
+      owner: req.user._id,
+      name,
+      _id: { $ne: playlistId },
+    });
+    if (duplicate) {
+      throw new ApiError(
+        HttpStatus.Conflict,
+        `Playlist with name '${name}' is already exist`,
+      );
+    }
+    playlist.name = name;
+  }
+
+  if (description !== undefined) {
+    playlist.description = description;
+  }
+  if (status !== undefined) {
+    playlist.status = status;
+  }
+
+  await playlist.save();
+  const playlistData = playlist.toObject();
+  res.status(HttpStatus.OK).json(
+    new ApiResponse(HttpStatus.OK, "Playlist updated successfully", {
+      ...playlistData,
+      songs: playlistData.songs.length,
+    }),
+  );
+});
 const getPlaylistSongs = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   const { limit, cursor } = req.query;
@@ -387,4 +439,5 @@ export {
   removeSongs,
   getPlaylistSongs,
   getPlaylists,
+  updatePlaylist,
 };

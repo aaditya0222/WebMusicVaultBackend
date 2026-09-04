@@ -206,19 +206,30 @@ const verifyEmail = asyncHandler(
 const refreshAccessToken = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const refreshToken: string = req.cookies.refreshToken;
-    const { accessToken, newRefreshToken } =
-      await refreshAccessTokenService(refreshToken);
+    try {
+      const { accessToken, newRefreshToken } =
+        await refreshAccessTokenService(refreshToken);
 
-    res
-      .status(HttpStatus.OK)
-      .cookie("refreshToken", newRefreshToken, options)
-      .json(
-        new ApiResponse(
-          HttpStatus.OK,
-          "Successfully send the accessToken",
-          accessToken,
-        ),
-      );
+      res
+        .status(HttpStatus.OK)
+        .cookie("refreshToken", newRefreshToken, options)
+        .json(
+          new ApiResponse(
+            HttpStatus.OK,
+            "Successfully send the accessToken",
+            accessToken,
+          ),
+        );
+    } catch (err) {
+      // The refresh (and hence the session) is dead: expired, invalid, or
+      // revoked because the user signed in elsewhere (token rotation). Clear
+      // the stale cookie so the client stops re-triggering the same
+      // "logged in on another device" / session-expired flow on every reload.
+      if (err instanceof ApiError && err.status === HttpStatus.Unauthorized) {
+        res.clearCookie("refreshToken", options);
+      }
+      throw err;
+    }
   },
 );
 

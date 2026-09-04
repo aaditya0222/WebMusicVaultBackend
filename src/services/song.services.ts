@@ -84,6 +84,12 @@ const uploadSongService = async (
       throw new Error("There was a problem while uploading song");
     }
     if (files.coverImage) {
+      if (files.coverImage.size > env.MAX_COVER_IMAGE_FILE_SIZE) {
+        throw new ApiError(
+          HttpStatus.BadRequest,
+          "Cover image file size exceeds the permitted limit",
+        );
+      }
       coverUploadResult = await uploadFile({
         buffer: files.coverImage.buffer,
         folder: "coverImages",
@@ -99,7 +105,7 @@ const uploadSongService = async (
       title: body.title ?? files.song.originalname,
       duration: songUploadResult.duration,
       publicId: songUploadResult.public_id,
-      fileUrl: songUploadResult.secure_url,
+      fileUrl: getSongUrl(songUploadResult.public_id),
       coverImageUrl: coverUploadResult?.secure_url,
       coverImagePublicId: coverUploadResult?.public_id,
       artist: body.artist,

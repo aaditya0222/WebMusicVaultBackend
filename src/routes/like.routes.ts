@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { toggleSongLike, getLikedSongs } from "../controllers/like.controller";
 import { validate } from "../middlewares/validate.middleware";
-import { likeSongSchema } from "../schemas/like.schema";
+import { likeSongSchema, getLikedSongsSchema } from "../schemas/like.schema";
 import { authMiddleware, authMiddlewareNotStrict } from "../middlewares/auth.middleware";
 const router = Router();
 
@@ -12,6 +12,11 @@ router.post(
   toggleSongLike,
 );
 
-router.get("/:userId", authMiddlewareNotStrict, getLikedSongs);
+router.get(
+  "/:userId",
+  authMiddlewareNotStrict,
+  validate(getLikedSongsSchema),
+  getLikedSongs,
+);
 
 export default router;

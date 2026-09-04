@@ -5,10 +5,14 @@ import { ZodError } from "zod";
 import { HttpStatus } from "../utils/HttpStatus";
 import { ErrorCode } from "../utils/ErrorCode";
 import { TokenExpiredError } from "jsonwebtoken";
+import { MulterError } from "multer";
 interface CustomError extends Error {
   status?: HttpStatus;
   errors?: (string | { field: string; message: string })[];
-  code?: ErrorCode;
+  // `string` is included so a `CustomError & MulterError` intersection stays
+  // representable (MulterError.code is a plain string, e.g. "LIMIT_FILE_SIZE")
+  // instead of collapsing to `never`.
+  code?: ErrorCode | string;
 }
 
 type NormalizedError = { field?: string; message: string };
@@ -45,6 +49,29 @@ const errorMiddleware = (
     status = HttpStatus.Unauthorized;
     message = "Session expired, please login again";
     code = ErrorCode.TOKEN_EXPIRED;
+  } else if (err instanceof MulterError) {
+    // Multer errors carry no `status`, so without this branch they fall
+    // through as 500s (multer aborts the upload mid-stream -> LIMIT_FILE_SIZE
+    // is a client error, not a server fault).
+    if (err.code === "LIMIT_FILE_SIZE") {
+      status = HttpStatus.PayloadTooLarge;
+      const imageMb = Math.round(
+        env.MAX_COVER_IMAGE_FILE_SIZE / (1024 * 1024),
+      );
+      const musicMb = Math.round(env.MAX_MUSIC_FILE_SIZE / (1024 * 1024));
+      message =
+        err.field === "song"
+          ? `Audio file is too large. Maximum allowed size is ${musicMb} MB`
+          : `Image is too large. Maximum allowed size is ${imageMb} MB`;
+    } else if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      status = HttpStatus.BadRequest;
+      message = err.field
+        ? `Unexpected file field: ${err.field}`
+        : "Unexpected file in upload";
+    } else {
+      status = HttpStatus.BadRequest;
+      message = `Upload error: ${err.message}`;
+    }
   } else if (Array.isArray(err.errors) && err.errors.length > 0) {
     responseErrors = err.errors.map((e) =>
       typeof e === "string" ? { message: e } : e,

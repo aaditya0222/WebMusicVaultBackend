@@ -32,6 +32,8 @@ const playlistSchema = new Schema<Playlist>(
     description: {
       type: String,
       trim: true,
+      min: 3,
+      max: 100,
     },
     status: {
       type: String,

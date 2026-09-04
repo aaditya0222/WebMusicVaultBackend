@@ -42,12 +42,12 @@ likeSchema.pre("validate", function (next) {
 });
 likeSchema.index(
   { song: 1, likedBy: 1 },
-  { unique: true, partialFilterExpression: { song: { $exist: true } } },
+  { unique: true, partialFilterExpression: { song: { $exists: true } } },
 );
 //when not using sparse true it was treating also the undefined values as actual values which was causing error.
 likeSchema.index(
   { playlist: 1, likedBy: 1 },
-  { unique: true, partialFilterExpression: { playlist: { $exist: true } } },
+  { unique: true, partialFilterExpression: { playlist: { $exists: true } } },
 );
 
 const Like = model<Like>("Like", likeSchema);

@@ -10,12 +10,14 @@ import {
   getPlaylistSongs,
   getPlaylists,
   removeSongs,
+  updatePlaylist,
 } from "../controllers/playlist.controller";
 import {
   createPlaylistSchema,
   modifyPlaylistSongSchema,
   removePlaylistSongSchema,
   getPlaylistSongsSchema,
+  updatePlaylistSchema,
 } from "../schemas/playlist.schema";
 
 const router = Router();
@@ -43,6 +45,13 @@ router.patch(
   authMiddleware,
   validate(removePlaylistSongSchema),
   removeSongs,
+);
+
+router.put(
+  "/:playlistId",
+  authMiddleware,
+  validate(updatePlaylistSchema),
+  updatePlaylist,
 );
 
 export default router;

@@ -10,6 +10,7 @@ export enum HttpStatus {
   Forbidden = 403,
   NotFound = 404,
   Conflict = 409,
+  PayloadTooLarge = 413,
   TooManyRequests = 429,
 
   // Server errors

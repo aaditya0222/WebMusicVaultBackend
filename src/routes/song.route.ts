@@ -1,6 +1,6 @@
 import { Router } from "express";
 const router = Router();
-import { upload } from "../middlewares/multer.middleware";
+import { upload, uploadCoverImage } from "../middlewares/multer.middleware";
 
 import {
   uploadSong,
@@ -9,8 +9,6 @@ import {
   getRandomSong,
   updateRequiredFieldsOfSong,
   getSongsOrSearchSongs,
-  getAllSongOfArtist,
-  increamentPlayCount,
   getPinnedSongs,
   setPinSong,
 } from "../controllers/song.controller";
@@ -43,8 +41,7 @@ router.post(
 router.get("/", authMiddlewareNotStrict, getSongsOrSearchSongs);
 //Get random songs for shuffle play
 router.get("/random/:count", authMiddlewareNotStrict, getRandomSong);
-//Get all songs of a particular artist
-router.get("/artist/:artist", getAllSongOfArtist);
+
 //Get pinned songs for the current user
 router.get("/pinned", authMiddlewareNotStrict, getPinnedSongs);
 router.put("/:id/pin", authMiddleware, setPinSong(true));
@@ -62,10 +59,9 @@ router.delete("/:id", authMiddleware, validate(idParamSchema), deleteSongById);
 router.patch(
   "/:id",
   authMiddleware,
-  upload.single("coverImage"),
+  uploadCoverImage.single("coverImage"),
   validate(updateSongSchema),
   updateRequiredFieldsOfSong,
 );
 
-router.patch("/:id/incrplaycount", increamentPlayCount);
 export default router;

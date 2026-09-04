@@ -4,7 +4,7 @@ const name = z
   .string()
   .trim()
   .min(3, "Playlist name must be greater than 2 characters")
-  .max(15, "Playlist name must be less than 15 characters")
+  .max(30, "Playlist name must be less than or equal to 30 characters")
   .regex(
     /^[a-zA-Z0-9_ ]+$/,
     "Playlist name can only contain letters, numbers, underscores, and spaces",
@@ -14,7 +14,7 @@ const description = z
   .string()
   .trim()
   .min(3, "Description must be greater than 2 letters")
-  .max(50, "Description must be less than 50 letters")
+  .max(100, "Description must be less than 100 letters")
   .optional();
 
 const status = z.enum(["private", "public"]).default("private");
@@ -55,12 +55,26 @@ const getPlaylistSongsSchema = z.object({
   }),
 });
 
+const updatePlaylistSchema = z.object({
+  params: z.object({
+    playlistId: objectId,
+  }),
+  body: z.object({
+    name: name.optional(),
+    description: description.optional(),
+    status: z.enum(["private", "public"]).optional(),
+  }),
+});
+
 type createPlaylistSchemaType = z.infer<typeof createPlaylistSchema>["body"];
+type updatePlaylistSchemaType = z.infer<typeof updatePlaylistSchema>["body"];
 export {
   createPlaylistSchema,
   modifyPlaylistSongSchema,
   removePlaylistSongSchema,
   getPlaylistSongsSchema,
+  updatePlaylistSchema,
   objectId,
   createPlaylistSchemaType,
+  updatePlaylistSchemaType,
 };
