@@ -137,6 +137,7 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
               updatedAt: 1,
               playCount: 1,
               isLiked: 1,
+              palette: 1,
             },
           },
         ],

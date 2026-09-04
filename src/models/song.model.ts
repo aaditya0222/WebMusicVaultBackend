@@ -1,5 +1,12 @@
 import { Schema, model, Types } from "mongoose";
 
+export interface SongPalette {
+  vibrant?: string | null;
+  muted?: string | null;
+  darkVibrant?: string | null;
+  lightVibrant?: string | null;
+}
+
 export interface SongI {
   title: string;
   duration: number;
@@ -9,6 +16,7 @@ export interface SongI {
   owner: Types.ObjectId;
   coverImageUrl?: string;
   coverImagePublicId?: string;
+  palette?: SongPalette;
   playCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -23,6 +31,12 @@ const songSchema = new Schema<SongI>(
     fileUrl: { type: String, required: true },
     coverImageUrl: String,
     coverImagePublicId: String,
+    palette: {
+      vibrant: String,
+      muted: String,
+      darkVibrant: String,
+      lightVibrant: String,
+    },
     owner: {
       type: Schema.Types.ObjectId,
       ref: "User",

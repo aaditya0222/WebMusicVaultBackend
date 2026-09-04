@@ -398,6 +398,7 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
               updatedAt: 1,
               playCount: 1,
               isLiked: 1,
+              palette: 1,
             },
           },
         ],

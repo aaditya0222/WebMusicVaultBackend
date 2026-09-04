@@ -52,6 +52,7 @@
     "multer": "^2.0.2",
     "music-metadata": "^11.13.0",
     "nanoid": "^5.1.6",
+    "node-vibrant": "^4.0.4",
     "nodemailer": "^8.0.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",

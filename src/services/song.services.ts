@@ -15,6 +15,23 @@ import {
 import { MongoServerError } from "mongodb";
 
 import { FilterQuery } from "mongoose";
+import { Vibrant } from "node-vibrant/node";
+
+// ── Extract palette from a cover image URL ────────────────────────
+async function extractPalette(coverImageUrl: string | undefined) {
+  if (!coverImageUrl) return undefined;
+  try {
+    const palette = await Vibrant.from(coverImageUrl).getPalette();
+    return {
+      vibrant: palette.Vibrant?.hex ?? null,
+      muted: palette.Muted?.hex ?? null,
+      darkVibrant: palette.DarkVibrant?.hex ?? null,
+      lightVibrant: palette.LightVibrant?.hex ?? null,
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 type nonUniqueSortBy = "playCount" | "duration" | "createdAt";
 type uniqueSortBy = "title";
@@ -101,6 +118,8 @@ const uploadSongService = async (
       }
     }
 
+    const palette = await extractPalette(coverUploadResult?.secure_url);
+
     const song = await Song.create({
       title: body.title ?? files.song.originalname,
       duration: songUploadResult.duration,
@@ -110,6 +129,7 @@ const uploadSongService = async (
       coverImagePublicId: coverUploadResult?.public_id,
       artist: body.artist,
       owner: userId,
+      palette,
     });
 
     return { song };
@@ -611,9 +631,11 @@ const updateSongFieldsService = async ({
   if (coverUploadResult) {
     song.coverImagePublicId = coverUploadResult.public_id;
     song.coverImageUrl = coverUploadResult.secure_url;
+    song.palette = await extractPalette(coverUploadResult.secure_url);
   } else if (removeCoverImage) {
     song.coverImagePublicId = undefined;
     song.coverImageUrl = undefined;
+    song.palette = undefined;
   }
 
   await song.save();
