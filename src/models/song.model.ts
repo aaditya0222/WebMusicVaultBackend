@@ -9,6 +9,7 @@ export interface SongPalette {
 
 export interface SongI {
   title: string;
+  extension: string;
   duration: number;
   artist?: string;
   publicId: string;
@@ -25,6 +26,7 @@ export interface SongI {
 const songSchema = new Schema<SongI>(
   {
     title: { type: String, required: true, trim: true },
+    extension: { type: String, default: ".mp3" },
     duration: { type: Number, required: true, min: 1 },
     artist: { type: String, default: "Unknown Artist", trim: true },
     publicId: { type: String, required: true },

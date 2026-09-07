@@ -261,9 +261,10 @@ const createCursorQuery = ({
 };
 
 // ── Atlas Search ──────────────────────────────────────────────────
-// Uses the Atlas Search index `songs_search_index` (static mapping on
-// artist + title). compound.should + fuzzy matching + artist boost gives
-// relevance-ranked results (e.g. "arifit" still matches "Arijit").
+// Uses the Atlas Search index `songs_search_index` with multi fields:
+//   - autocomplete (edgeGram): "dand" matches "Dandelions" (partial typing)
+//   - fuzzy: "arijkt" matches "Arijit" (typo tolerance)
+//   - wildcard: tiebreaker for edge cases
 const buildAtlasSearchPipeline = ({
   query,
   limit,
@@ -289,12 +290,36 @@ const buildAtlasSearchPipeline = ({
       index: "songs_search_index",
       compound: {
         should: [
+          // 1. Exact title match - highest priority (e.g. "Ishq" → "Ishq")
+          {
+            phrase: {
+              query,
+              path: "title",
+              score: { boost: { value: 20 } },
+            },
+          },
+          // 2. Autocomplete for partial typing (e.g. "dand" → "Dandelions")
+          {
+            autocomplete: {
+              query,
+              path: "title",
+              score: { boost: { value: 10 } },
+            },
+          },
+          {
+            autocomplete: {
+              query,
+              path: "artist",
+              score: { boost: { value: 8 } },
+            },
+          },
+          // 3. Fuzzy for typos (e.g. "arijkt" → "arijit")
           {
             text: {
               query,
               path: "artist",
-              fuzzy: { maxEdits: 2, prefixLength: 1 },
-              score: { boost: { value: 3 } },
+              fuzzy: { maxEdits: 1 },
+              score: { boost: { value: 2 } },
             },
           },
           {
@@ -302,9 +327,28 @@ const buildAtlasSearchPipeline = ({
               query,
               path: "title",
               fuzzy: { maxEdits: 1 },
+              score: { boost: { value: 2 } },
+            },
+          },
+          // 4. Wildcard as tiebreaker (boost 1)
+          {
+            wildcard: {
+              query: `${query}*`,
+              path: "artist",
+              allowAnalyzedField: true,
+              score: { boost: { value: 1 } },
+            },
+          },
+          {
+            wildcard: {
+              query: `${query}*`,
+              path: "title",
+              allowAnalyzedField: true,
+              score: { boost: { value: 1 } },
             },
           },
         ],
+        minimumShouldMatch: 1,
       },
     },
   } as unknown as PipelineStage;
