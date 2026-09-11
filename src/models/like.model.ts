@@ -1,4 +1,6 @@
 import { model, Schema, Types } from "mongoose";
+import ApiError from "../utils/ApiError";
+import { HttpStatus } from "../utils/HttpStatus";
 
 interface Like {
   song?: Types.ObjectId;
@@ -27,10 +29,17 @@ const likeSchema = new Schema<Like>(
 );
 likeSchema.pre("validate", function (next) {
   if (!this.song && !this.playlist) {
-    return next(new Error("Like must reference a song or playlist"));
+    return next(
+      new ApiError(
+        HttpStatus.BadRequest,
+        "Like must reference a song or playlist",
+      ),
+    );
   }
   if (this.song && this.playlist) {
-    return next(new Error("Like cannot reference both"));
+    return next(
+      new ApiError(HttpStatus.BadRequest, "Like cannot reference both"),
+    );
   }
   // Ensure the unused field is removed from the document entirely
   if (this.song) {

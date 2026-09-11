@@ -104,12 +104,12 @@ const getRandomSong = asyncHandler(async (req: Request, res: Response) => {
   if (!randomSongs) {
     res
       .status(HttpStatus.OK)
-      .send(new ApiResponse(HttpStatus.OK, "No songs found", null));
+      .json(new ApiResponse(HttpStatus.OK, "No songs found", null));
     return;
   }
   res
     .status(HttpStatus.OK)
-    .send(
+    .json(
       new ApiResponse(
         HttpStatus.OK,
         "Successfully sent a random song",
@@ -139,7 +139,7 @@ const updateRequiredFieldsOfSong = asyncHandler(
     });
     res
       .status(HttpStatus.OK)
-      .send(
+      .json(
         new ApiResponse(
           HttpStatus.OK,
           "Song updated successfully",
@@ -156,7 +156,7 @@ const getPinnedSongs = asyncHandler(
     const pinnedSongs = await getPinnedSongsService(userId);
     res
       .status(HttpStatus.OK)
-      .send(
+      .json(
         new ApiResponse(
           HttpStatus.OK,
           "Pinned songs sent successfully",
@@ -178,7 +178,7 @@ const setPinSong = (pin: boolean) => {
 
     res
       .status(HttpStatus.OK)
-      .send(
+      .json(
         new ApiResponse(
           HttpStatus.OK,
           message

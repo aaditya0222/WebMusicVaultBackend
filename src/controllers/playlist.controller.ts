@@ -38,14 +38,19 @@ const createPlaylist = asyncHandler(
       owner: req.user.id,
     });
     const playlistData = playlist.toObject();
-    res
-      .status(HttpStatus.Created)
-      .json(
-        new ApiResponse(HttpStatus.OK, "Playlist created successfully", {
-          ...playlistData,
-          songs: playlistData.songs.length,
-        }),
-      );
+    res.status(HttpStatus.Created).json(
+      new ApiResponse(HttpStatus.Created, "Playlist created successfully", {
+        _id: playlistData._id,
+        name: playlistData.name,
+        status: playlistData.status,
+        description: playlistData.description,
+        songs: playlistData.songs.length,
+        owner: playlistData.owner,
+        isDefault: playlistData.isDefault,
+        createdAt: playlistData.createdAt,
+        updatedAt: playlistData.updatedAt,
+      }),
+    );
   },
 );
 const getPlaylists = asyncHandler(async (req, res) => {
@@ -307,8 +312,15 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   const playlistData = playlist.toObject();
   res.status(HttpStatus.OK).json(
     new ApiResponse(HttpStatus.OK, "Playlist updated successfully", {
-      ...playlistData,
+      _id: playlistData._id,
+      name: playlistData.name,
+      status: playlistData.status,
+      description: playlistData.description,
       songs: playlistData.songs.length,
+      owner: playlistData.owner,
+      isDefault: playlistData.isDefault,
+      createdAt: playlistData.createdAt,
+      updatedAt: playlistData.updatedAt,
     }),
   );
 });
@@ -391,7 +403,6 @@ const getPlaylistSongs = asyncHandler(async (req, res) => {
               title: 1,
               duration: 1,
               artist: 1,
-              publicId: 1,
               coverImageUrl: 1,
               owner: 1,
               createdAt: 1,

@@ -13,8 +13,7 @@ const toggleSongLike = asyncHandler(async (req: Request, res: Response) => {
   const songId = req.params.id;
   const song = await Song.exists({ _id: songId });
   if (!song) {
-    res.status(404).json({ message: "Song not found" });
-    return;
+    throw new ApiError(HttpStatus.NotFound, "Song not found");
   }
   const likeData = {
     song: songId,
@@ -130,7 +129,6 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
               title: 1,
               duration: 1,
               artist: 1,
-              publicId: 1,
               coverImageUrl: 1,
               owner: 1,
               createdAt: 1,

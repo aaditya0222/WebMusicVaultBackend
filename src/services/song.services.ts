@@ -65,7 +65,7 @@ import User from "../models/user.model";
 
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 10,
+  max: env.NODE_ENV === "production" ? 10 : 200,
   message: {
     status: HttpStatus.TooManyRequests,
     message: "Too many uploads, please try again later",
@@ -211,7 +211,13 @@ const createCursorQuery = ({
     if (sortOrder === "asc") {
       return sortBy === "title"
         ? {
-            [sortBy]: { $gt: cursorValue },
+            $or: [
+              { title: { $gt: cursorValue } },
+              {
+                title: cursorValue,
+                _id: { $gt: new Types.ObjectId(cursor._id) },
+              },
+            ],
           }
         : {
             $or: [
@@ -227,7 +233,13 @@ const createCursorQuery = ({
     } else {
       return sortBy === "title"
         ? {
-            [sortBy]: { $lt: cursorValue },
+            $or: [
+              { title: { $lt: cursorValue } },
+              {
+                title: cursorValue,
+                _id: { $lt: new Types.ObjectId(cursor._id) },
+              },
+            ],
           }
         : {
             $or: [
@@ -670,7 +682,7 @@ const updateSongFieldsService = async ({
   }
   const oldPublicId = song.coverImagePublicId;
 
-  if (title) song.title = title + ".mp3";
+  if (title) song.title = title;
   if (artist) song.artist = artist;
   if (coverUploadResult) {
     song.coverImagePublicId = coverUploadResult.public_id;
