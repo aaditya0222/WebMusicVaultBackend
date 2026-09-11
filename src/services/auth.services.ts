@@ -228,7 +228,12 @@ const setPasswordService = async ({
   user.password = password;
   user.otp = undefined;
   user.otpExpiry = undefined;
-  user.authProviders?.push("local");
+  // Only add "local" once — edit-password flows already have it, and an
+  // unconditional push accumulates duplicates on every save. (Mirrors the
+  // guarded `includes("google")` pattern in passport.ts.)
+  if (!user.authProviders?.includes("local")) {
+    user.authProviders?.push("local");
+  }
   await user.save();
   const { refreshToken, accessToken } = await user.generateAuthTokens();
   return { accessToken, refreshToken, user };
