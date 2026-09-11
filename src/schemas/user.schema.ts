@@ -23,7 +23,7 @@ const displayName = z
 
 const password = z
   .string()
-  .min(6, "Password must be at least 6 characters long")
+  .min(8, "Password must be at least 8 characters long")
   .max(50, "Password must be less than or equal to 50 characters");
 
 const identifier = email.or(username);
@@ -53,7 +53,7 @@ const loginSchema = z.object({
 const suggestUsernameSchema = z.object({
   body: z.object({
     identifier: displayName.or(email),
-    n: z.coerce.number(),
+    n: z.coerce.number().int().min(1).max(9),
   }),
 });
 const setPasswordSchema = z.object({

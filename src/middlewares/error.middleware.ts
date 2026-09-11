@@ -55,9 +55,7 @@ const errorMiddleware = (
     // is a client error, not a server fault).
     if (err.code === "LIMIT_FILE_SIZE") {
       status = HttpStatus.PayloadTooLarge;
-      const imageMb = Math.round(
-        env.MAX_COVER_IMAGE_FILE_SIZE / (1024 * 1024),
-      );
+      const imageMb = Math.round(env.MAX_COVER_IMAGE_FILE_SIZE / (1024 * 1024));
       const musicMb = Math.round(env.MAX_MUSIC_FILE_SIZE / (1024 * 1024));
       message =
         err.field === "song"
@@ -78,6 +76,14 @@ const errorMiddleware = (
     );
   } else {
     responseErrors = [{ message: err.message }];
+  }
+
+  if (status >= HttpStatus.InternalServerError) {
+    console.error("[unhandled error]", err);
+    status = HttpStatus.InternalServerError;
+    message = "Internal server error";
+    code = undefined;
+    responseErrors = [];
   }
 
   res.status(status).json({
