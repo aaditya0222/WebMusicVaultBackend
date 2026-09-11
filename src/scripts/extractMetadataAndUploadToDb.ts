@@ -1,3 +1,4 @@
+import { v2 as cloudinary } from "cloudinary";
 import { uploadFile } from "../config/cloudinary";
 import Song from "../models/song.model";
 import { parseWebStream } from "music-metadata";
@@ -9,7 +10,7 @@ const LOG_PATH = path.resolve("migration-log.json");
 interface LogEntry {
   songId: string;
   title: string;
-  status: "success" | "skipped" | "failed";
+  status: "success" | "skipped" | "failed" | "deleted";
   reason?: string;
   updates?: string[];
   timestamp: string;
@@ -37,7 +38,7 @@ export async function extractMetaData() {
 
       const body = response.body;
       if (!body) {
-        console.warn(`  ⚠ Skipping: response body is null`);
+        console.warn(`  Skipping: response body is null`);
         log.push({
           songId: song._id.toString(),
           title: song.title,
@@ -45,7 +46,7 @@ export async function extractMetaData() {
           reason: "response body is null",
           timestamp: new Date().toISOString(),
         });
-        writeLog(log); // ← write after every song
+        writeLog(log);
         continue;
       }
 
@@ -54,13 +55,58 @@ export async function extractMetaData() {
         size,
       });
 
-      const artist = metadata.common.artist;
+      const extractedArtist = metadata.common.artist;
+      const finalArtist = extractedArtist || song.artist;
+
+      // ── Extract metadata FIRST, then check for duplicates ──
+      const duplicate = await Song.findOne({
+        _id: { $ne: song._id },
+        title: { $regex: `^${song.title}$`, $options: "i" },
+        artist: { $regex: `^${finalArtist}$`, $options: "i" },
+      });
+
+      if (duplicate) {
+        console.log(
+          `  DUPLICATE: "${song.title}" by "${finalArtist}" already exists (ID: ${duplicate._id}). Deleting this copy.`,
+        );
+        // Delete Cloudinary files for this duplicate
+        if (song.publicId) {
+          try {
+            await cloudinary.uploader.destroy(song.publicId, {
+              resource_type: "video",
+            });
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        }
+        if (song.coverImagePublicId) {
+          try {
+            await cloudinary.uploader.destroy(song.coverImagePublicId, {
+              resource_type: "image",
+            });
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        }
+        await Song.deleteOne({ _id: song._id });
+        log.push({
+          songId: song._id.toString(),
+          title: song.title,
+          status: "deleted",
+          reason: `duplicate of ${duplicate._id}`,
+          timestamp: new Date().toISOString(),
+        });
+        writeLog(log);
+        continue;
+      }
+
+      // ── No duplicate - update this song with extracted metadata ──
       const updates: Record<string, any> = {};
       const updatedFields: string[] = [];
 
-      if (artist && song.artist === "Unknown Artist") {
-        updates.artist = artist;
-        updatedFields.push(`artist: ${artist}`);
+      if (extractedArtist && song.artist === "Unknown Artist") {
+        updates.artist = extractedArtist;
+        updatedFields.push(`artist: ${extractedArtist}`);
       }
 
       if (metadata.common.picture?.length && !song.coverImageUrl) {
@@ -82,7 +128,7 @@ export async function extractMetaData() {
 
       if (Object.keys(updates).length > 0) {
         await Song.findOneAndUpdate({ _id: song._id }, updates);
-        console.log(`  ✓ Updated: ${updatedFields.join(", ")}`);
+        console.log(`  Updated: ${updatedFields.join(", ")}`);
         log.push({
           songId: song._id.toString(),
           title: song.title,
@@ -91,7 +137,7 @@ export async function extractMetaData() {
           timestamp: new Date().toISOString(),
         });
       } else {
-        console.log(`  — Nothing to update`);
+        console.log(`  Nothing to update`);
         log.push({
           songId: song._id.toString(),
           title: song.title,
@@ -101,7 +147,7 @@ export async function extractMetaData() {
         });
       }
     } catch (err: any) {
-      console.error(`  ✗ Failed:`, err?.message ?? err);
+      console.error(`  Failed:`, err?.message ?? err);
       log.push({
         songId: song._id.toString(),
         title: song.title,
@@ -111,7 +157,7 @@ export async function extractMetaData() {
       });
     }
 
-    writeLog(log); // ← always write after every song, even on failure
+    writeLog(log);
   }
 
   console.log(`\nMigration complete! ${songs.length} songs processed.`);

@@ -25,7 +25,12 @@ export interface SongI {
 
 const songSchema = new Schema<SongI>(
   {
-    title: { type: String, required: true, trim: true },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 125, // mirrors the Zod title cap (schemas/song.schema.ts)
+    },
     extension: { type: String, default: ".mp3" },
     duration: { type: Number, required: true, min: 1 },
     artist: { type: String, default: "Unknown Artist", trim: true },

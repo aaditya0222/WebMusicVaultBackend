@@ -1,6 +1,8 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { env } from "./env";
+import ApiError from "../utils/ApiError";
+import { HttpStatus } from "../utils/HttpStatus";
 import User from "../models/user.model";
 import { generateVerifiedUsername } from "../services/username.services";
 
@@ -20,7 +22,21 @@ passport.use(
       try {
         let user = await User.findOne({ googleId: profile.id });
         if (!user) {
-          const email = profile.emails?.[0].value as string;
+          // Only trust Google-CERTIFIED emails. A profile email flagged
+          // `verified: false` must never auto-link to an existing local
+          // account (or flip isEmailVerified) — otherwise anyone with an
+          // unverified Google account using a victim's email address takes
+          // over that account. Known OAuth account-takeover vector.
+          const googleEmail = profile.emails?.[0];
+          if (!googleEmail?.verified) {
+            return cb(
+              new ApiError(
+                HttpStatus.Forbidden,
+                "Google account email is not verified",
+              ),
+            );
+          }
+          const email = googleEmail.value as string;
           const avatar = profile.photos?.[0].value as string;
           const displayName = profile.displayName as string;
           const googleId = profile.id as string;
