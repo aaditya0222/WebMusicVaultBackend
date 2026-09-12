@@ -127,8 +127,10 @@ const getLikedSongs = asyncHandler(async (req: Request, res: Response) => {
           {
             $project: {
               title: 1,
+              extension: 1,
               duration: 1,
               artist: 1,
+              publicId: 1,
               coverImageUrl: 1,
               owner: 1,
               createdAt: 1,
